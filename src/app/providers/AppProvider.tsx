@@ -1,9 +1,5 @@
 import React from "react";
 
-type Props = {
-    children: React.ReactNode;
-};
-
-export default function AppProvider({ children }: Props) {
+export default function AppProvider({ children }: any) {
     return <>{children}</>;
 }
