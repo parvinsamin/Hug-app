@@ -1,0 +1,7 @@
+توضیح کوتاه:
+
+useBootStore مثل یک service + state در Angular است، اما با hook در React.
+status می‌گوید Boot در چه مرحله‌ای است.
+language و country را فعلاً از دستگاه می‌گیریم، بعداً از سرور و کش هم اضافه می‌کنیم.
+
+
