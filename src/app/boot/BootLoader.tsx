@@ -1,36 +1,48 @@
 import { StackActions, useNavigation } from "@react-navigation/native";
-import { useEffect } from "react";
+import * as SplashScreen from "expo-splash-screen";
+import { useCallback, useEffect, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 import { geoService } from "@/src/services/api/geo.service";
 import { useAppStore } from "@/src/store/appStore";
 import { applyDirection } from "@/src/utils/i18n-direction";
 
+// ✅ جلوگیری از auto hide شدن اسپلش
+SplashScreen.preventAutoHideAsync();
+
 export default function BootLoader() {
     const navigation = useNavigation();
     const setLocale = useAppStore((s) => s.setLocale);
+    const mounted = useRef(true);
 
     useEffect(() => {
         init();
+
+        return () => {
+            mounted.current = false;
+        };
     }, []);
 
-    async function init() {
-        console.log("🚀 Boot start");
-
-        async function isOnline() {
-            try {
-                const res = await fetch("https://hugmerchant.com", { method: "HEAD" });
-                return res.ok;
-            } catch {
-                return false;
-            }
+    const isOnline = async () => {
+        try {
+            const res = await fetch("https://hugmerchant.com", { method: "HEAD" });
+            return res.ok;
+        } catch {
+            return false;
         }
+    };
+
+    const init = useCallback(async () => {
+        console.log("🚀 Boot start");
 
         const online = await isOnline();
         console.log("🌐 Online:", online);
 
         if (!online) {
-            setTimeout(() => navigation.dispatch(StackActions.replace("NetworkError")), 0);
+            if (mounted.current) {
+                await SplashScreen.hideAsync();
+                navigation.dispatch(StackActions.replace("NetworkError"));
+            }
             return;
         }
 
@@ -39,30 +51,50 @@ export default function BootLoader() {
             console.log("🌍 GEO:", geo);
 
             if (!geo?.data?.countryData) {
-                setTimeout(() => navigation.dispatch(StackActions.replace("CountryNotSupported")), 0);
+                if (mounted.current) {
+                    await SplashScreen.hideAsync();
+                    navigation.dispatch(
+                        StackActions.replace("CountryNotSupported")
+                    );
+                }
                 return;
             }
 
-            const { code, lang_code, lang_direction } = geo.data.countryData;
+            const { code, lang_code, lang_direction } =
+                geo.data.countryData;
 
+            // ✅ set locale in zustand
             setLocale({
                 country: code,
                 language: lang_code,
                 direction: lang_direction,
             });
 
+            // ✅ apply RTL/LTR
             await applyDirection(lang_direction);
 
-            setTimeout(() => navigation.dispatch(StackActions.replace("Splash")), 0);
+            if (mounted.current) {
+                await SplashScreen.hideAsync();
+                navigation.dispatch(StackActions.replace("Splash"));
+            }
         } catch (error) {
             console.log("❌ Boot error:", error);
-            setTimeout(() => navigation.dispatch(StackActions.replace("NetworkError")), 0);
-        }
-    }
 
-    // 👇 لودینگ صفحه Boot
+            if (mounted.current) {
+                await SplashScreen.hideAsync();
+                navigation.dispatch(StackActions.replace("NetworkError"));
+            }
+        }
+    }, [navigation, setLocale]);
+
     return (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <View
+            style={{
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+            }}
+        >
             <ActivityIndicator size="large" color="#555" />
         </View>
     );

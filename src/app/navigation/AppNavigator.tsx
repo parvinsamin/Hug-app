@@ -9,6 +9,7 @@ import ProfileScreen from '@/src/features/profile/ProfileScreen';
 import NetworkError from '@/src/screens/errors/NetworkError';
 import { SplashScreen } from '@/src/screens/SplashScreen';
 import BootLoader from '../boot/BootLoader';
+import MainTabs from './MainTabs';
 
 export type RootStackParamList = {
     Splash: undefined;
@@ -19,6 +20,7 @@ export type RootStackParamList = {
     AdCreate: undefined;
     NetworkError: undefined;
     CountryNotSupported: undefined;
+    Tabs: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -31,14 +33,18 @@ const AppNavigator: React.FC = () => {
                 component={BootLoader}
                 options={{ headerShown: false }}
             />
-            <Stack.Screen name="Hug" component={HugScreen} />
             <Stack.Screen name="Splash" component={SplashScreen} />
+            <Stack.Screen
+                name="Tabs"
+                component={MainTabs}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen name="Hug" component={HugScreen} />
             <Stack.Screen name="Messages" component={MessagesScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="AdCreate" component={AdCreateScreen} />
             <Stack.Screen name="CountryNotSupported" component={AdCreateScreen} />
             <Stack.Screen name="NetworkError" component={NetworkError} />
-
         </Stack.Navigator>
     );
 };

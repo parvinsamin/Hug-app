@@ -1,11 +1,14 @@
+import { StackActions, useNavigation } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import { I18nManager, StyleSheet, Text, View } from "react-native";
+
 import { loadSplash } from "../services/splash/splash.service";
 import { useAppStore } from "../store/appStore";
 
 export function SplashScreen() {
     const locale = useAppStore(state => state.locale);
     const [data, setData] = useState<any>(null);
+    const navigation = useNavigation();
 
     useEffect(() => {
         async function load() {
@@ -14,15 +17,20 @@ export function SplashScreen() {
 
             I18nManager.allowRTL(locale.direction === "rtl");
             I18nManager.forceRTL(locale.direction === "rtl");
+
+            // رفتن به Tabs بعد از نمایش کوتاه Splash
+            setTimeout(() => {
+                navigation.dispatch(StackActions.replace("Tabs"));
+            }, 1200);
         }
+
         load();
-    }, [locale]);
+    }, [locale, navigation]);
 
     if (!data) return null;
 
     return (
         <View style={styles.container}>
-            {/* <Image source={require("../../assets/images/" + data.image)} style={styles.image} /> */}
             <Text style={styles.title}>{data.title}</Text>
             <Text style={styles.subtitle}>{data.subtitle}</Text>
         </View>
