@@ -1,154 +1,190 @@
-import React from "react";
-import {
-    Image,
-    Pressable,
-    StyleSheet,
-    View,
-} from "react-native";
-import { colors } from "../theme/colors";
-import { rowDirection } from "../utils/rtl";
-import AppText from "./AppText";
+import { useTheme } from '@/src/context/ThemeProvider';
+import React from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-type Props = {
-    title: string;
-    location: string;
-    time: string;
-    price?: string;
+interface ListingCardProps {
+    title?: string;
+    image?: string;
+    location?: string;
+    timeAgo?: string;
+    rooms?: string;
+    area?: number;
+    capacity?: number;
     rent?: string;
-    image: any;
-    featured?: boolean;
-    badge?: string;
-};
+    deposit?: string;
+    isAdminMessage?: boolean;
+    adminMessage?: string;
+}
 
 export default function ListingCard({
-    title,
-    location,
-    time,
-    price,
+    title = "",
+    image = "",
+    location = "",
+    timeAgo = "",
+    rooms,
+    area,
+    capacity,
     rent,
-    image,
-    featured,
-    badge,
-}: Props) {
-    return (
-        <View style={styles.card}>
-            <View style={styles.topRow}>
-                <Pressable style={styles.bookmark} />
-                <AppText variant="subtitle" bold style={styles.title}>
-                    {title}
-                </AppText>
+    deposit,
+    isAdminMessage = false,
+    adminMessage = "",
+}: ListingCardProps) {
+    const { theme } = useTheme();
+
+    // اگر پیام مدیریتی باشد
+    if (isAdminMessage) {
+        return (
+            <View style={[styles.adminCard, { backgroundColor: theme.colors.primary + '10' }]}>
+                <Text style={[styles.adminTitle, { color: theme.colors.primary }]}>
+                    📢 {adminMessage || "پیام مدیریت"}
+                </Text>
             </View>
+        );
+    }
 
-            <View style={[styles.contentRow, { flexDirection: rowDirection }]}>
-                <Image source={image} style={styles.image} />
+    return (
+        <TouchableOpacity style={[styles.card, { backgroundColor: theme.colors.background }]}>
+            {/* سمت چپ: متن‌ها */}
+            <View style={styles.content}>
+                <Text style={[styles.title, { color: theme.colors.text }]} numberOfLines={2}>
+                    {title}
+                </Text>
 
-                <View style={styles.info}>
-                    <View style={styles.chipsRow}>
-                        <View style={styles.chip}><AppText variant="small" style={styles.chipText}>بدون اتاق</AppText></View>
-                        <View style={styles.chip}><AppText variant="small" style={styles.chipText}>بدون اتاق</AppText></View>
-                        <View style={styles.chip}><AppText variant="small" style={styles.chipText}>۱۵۰۰۰ متر</AppText></View>
-                    </View>
+                <Text style={[styles.location, { color: theme.colors.text + '80' }]}>
+                    📍 {location}
+                </Text>
 
-                    <AppText variant="caption" style={styles.location}>
-                        {location}
-                    </AppText>
+                <Text style={[styles.time, { color: theme.colors.text + '60' }]}>
+                    🕐 {timeAgo}
+                </Text>
 
-                    <View style={styles.bottomInfo}>
-                        <AppText variant="caption" style={styles.time}>{time}</AppText>
-                        {price ? <AppText variant="caption" bold style={styles.price}>اجاره: {price}</AppText> : null}
-                        {rent ? <AppText variant="caption" bold style={styles.price}>ودیعه: {rent}</AppText> : null}
-                    </View>
-
-                    {badge ? (
-                        <View style={styles.badge}>
-                            <AppText variant="small" style={styles.badgeText}>{badge}</AppText>
+                {/* امکانات */}
+                <View style={styles.features}>
+                    {rooms && rooms !== "" && (
+                        <View style={styles.featureItem}>
+                            <Text style={[styles.featureText, { color: theme.colors.text }]}>
+                                🛏 {rooms}
+                            </Text>
                         </View>
-                    ) : null}
+                    )}
+                    {area && area > 0 && (
+                        <View style={styles.featureItem}>
+                            <Text style={[styles.featureText, { color: theme.colors.text }]}>
+                                📐 {area} متر
+                            </Text>
+                        </View>
+                    )}
+                    {capacity && capacity > 0 && (
+                        <View style={styles.featureItem}>
+                            <Text style={[styles.featureText, { color: theme.colors.text }]}>
+                                👥 {capacity} نفر
+                            </Text>
+                        </View>
+                    )}
+                </View>
+
+                {/* قیمت */}
+                <View style={styles.priceContainer}>
+                    {rent && rent !== "" && (
+                        <Text style={[styles.rent, { color: theme.colors.primary }]}>
+                            {rent} تومان
+                        </Text>
+                    )}
+                    {deposit && deposit !== "" && (
+                        <Text style={[styles.deposit, { color: theme.colors.text + '80' }]}>
+                            رهن: {deposit} تومان
+                        </Text>
+                    )}
                 </View>
             </View>
-        </View>
+
+            {/* سمت راست: عکس */}
+            <View style={styles.imageContainer}>
+                {image ? (
+                    <Image source={{ uri: image }} style={styles.image} />
+                ) : (
+                    <View style={[styles.image, styles.placeholder, { backgroundColor: theme.colors.border }]} />
+                )}
+            </View>
+        </TouchableOpacity>
     );
 }
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: colors.surface,
+        flexDirection: 'row',
         padding: 12,
-        marginBottom: 10,
+        marginHorizontal: 16,
+        marginVertical: 8,
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
-    topRow: {
-        flexDirection: rowDirection,
-        alignItems: "flex-start",
-        marginBottom: 10,
-    },
-    bookmark: {
-        width: 18,
-        height: 18,
-        borderWidth: 1,
-        borderColor: "#999",
-        borderRadius: 3,
-        marginEnd: 8,
-        marginTop: 2,
+    content: {
+        flex: 2,
+        marginRight: 12,
     },
     title: {
-        flex: 1,
-        color: colors.text,
-        lineHeight: 24,
-    },
-    contentRow: {
-        gap: 10,
-        alignItems: "flex-start",
-    },
-    image: {
-        width: 124,
-        height: 124,
-        borderRadius: 16,
-        backgroundColor: "#ddd",
-    },
-    info: {
-        flex: 1,
-    },
-    chipsRow: {
-        flexDirection: rowDirection,
-        flexWrap: "wrap",
-        gap: 6,
-        marginBottom: 8,
-    },
-    chip: {
-        backgroundColor: colors.chip,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 18,
-    },
-    chipText: {
-        color: colors.chipText,
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 6,
     },
     location: {
-        color: colors.muted,
-        marginBottom: 8,
-    },
-    bottomInfo: {
-        flexDirection: rowDirection,
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: 10,
+        fontSize: 12,
+        marginBottom: 4,
     },
     time: {
-        color: colors.muted,
+        fontSize: 11,
+        marginBottom: 8,
     },
-    price: {
-        color: colors.text,
+    features: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginBottom: 8,
     },
-    badge: {
-        alignSelf: "flex-start",
-        marginTop: 8,
-        borderWidth: 1,
-        borderColor: colors.accent,
-        borderRadius: 14,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
+    featureItem: {
+        marginRight: 12,
+        marginBottom: 4,
     },
-    badgeText: {
-        color: colors.accent,
+    featureText: {
+        fontSize: 12,
+    },
+    priceContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 4,
+    },
+    rent: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        marginRight: 12,
+    },
+    deposit: {
+        fontSize: 12,
+    },
+    imageContainer: {
+        flex: 1,
+    },
+    image: {
+        width: '100%',
+        height: 120,
+        borderRadius: 8,
+    },
+    placeholder: {
+        backgroundColor: '#e0e0e0',
+    },
+    adminCard: {
+        padding: 16,
+        marginHorizontal: 16,
+        marginVertical: 8,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    adminTitle: {
+        fontSize: 14,
+        fontWeight: '600',
     },
 });

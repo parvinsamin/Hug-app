@@ -1,5 +1,4 @@
-import * as Updates from "expo-updates";
-import { I18nManager, Platform } from "react-native";
+import { Alert, DevSettings, I18nManager, Platform } from "react-native";
 
 export async function applyDirection(direction: "rtl" | "ltr") {
     const isRTL = direction === "rtl";
@@ -11,11 +10,13 @@ export async function applyDirection(direction: "rtl" | "ltr") {
 
     if (I18nManager.isRTL === isRTL) return;
 
-    try {
-        I18nManager.allowRTL(isRTL);
-        I18nManager.forceRTL(isRTL);
-        await Updates.reloadAsync();
-    } catch (err) {
-        console.log("⚠️ Failed to apply RTL:", err);
+    I18nManager.allowRTL(isRTL);
+    I18nManager.forceRTL(isRTL);
+
+    // ری‌استارت سریع (فقط برای دیباگ)
+    if (__DEV__) {
+        DevSettings.reload();
+    } else {
+        Alert.alert("تغییر جهت", "لطفاً برنامه را ریستارت کنید.");
     }
 }

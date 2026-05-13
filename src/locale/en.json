@@ -1,5 +1,21 @@
 {
     "banner": {
-        "systemMessage": "This is a default system message"
+        "systemMessage": "این یک پیام پیش فرض جهت نمایش پیام سیستمی است"
+    },
+    "ads": {
+        "no_room": "بدون اتاق",
+        "area": "{{value}} متر",
+        "rent": "اجاره",
+        "deposit": "ودیعه",
+        "hours_ago": "{{value}} ساعت پیش",
+        "minutes_ago": "{{value}} دقیقه پیش",
+        "special": "ویژه",
+        "gold": "طلایی"
+    },
+    "tabs": {
+        "home": "Home",
+        "messages": "Messages",
+        "create_ad": "Create Ad",
+        "profile": "Profile"
     }
 }
