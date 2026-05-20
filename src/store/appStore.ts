@@ -1,44 +1,57 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-// Locale type
 export interface LocaleState {
     country: string;
     language: string;
     direction: "ltr" | "rtl";
 }
 
-// MAIN STORE TYPE
-export interface AppState {
-    deviceId?: string;
-    token?: string;
-    locale: LocaleState;
-
-    setDeviceId: (id: string) => void;
-    setToken: (token: string) => void;
-    setLocale: (locale: LocaleState) => void;
+export interface LocationState {
+    lat: number;
+    long: number;
 }
 
-// STORE IMPLEMENTATION
+export interface AppState {
+    deviceId?: string;
+    userToken?: string;     // token from real user login only
+    locale: LocaleState;
+    location?: LocationState;
+
+    setDeviceId: (id: string) => void;
+    setUserToken: (token: string) => void;
+    setLocale: (locale: LocaleState) => void;
+    setLocation: (location: LocationState) => void;
+}
+
+// ✅ use localStorage on web, AsyncStorage on mobile
+const storage = Platform.OS === "web"
+    ? createJSONStorage(() => localStorage)
+    : createJSONStorage(() => AsyncStorage);
+
 export const useAppStore = create<AppState>()(
     persist(
         (set) => ({
             deviceId: undefined,
-            token: undefined,
+            userToken: undefined,
+            location: undefined,
 
             locale: {
-                country: "us",
-                language: "en",
-                direction: "ltr",
+                country: "ir",
+                language: "fa-IR",
+                direction: "rtl",
             },
 
             setDeviceId: (id) => set({ deviceId: id }),
-            setToken: (token) => set({ token }),
+            setUserToken: (token) => set({ userToken: token }),
             setLocale: (locale) => set({ locale }),
+            setLocation: (location) => set({ location }),
         }),
         {
             name: "hug_app_storage",
-            storage: createJSONStorage(() => localStorage),
+            storage,
         }
     )
 );

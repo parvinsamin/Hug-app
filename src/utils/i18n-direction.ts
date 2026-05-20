@@ -13,7 +13,6 @@ export async function applyDirection(direction: "rtl" | "ltr") {
     I18nManager.allowRTL(isRTL);
     I18nManager.forceRTL(isRTL);
 
-    // ری‌استارت سریع (فقط برای دیباگ)
     if (__DEV__) {
         DevSettings.reload();
     } else {

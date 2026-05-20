@@ -1,21 +1,50 @@
 {
     "banner": {
-        "systemMessage": "این یک پیام پیش فرض جهت نمایش پیام سیستمی است"
+        "systemMessage": "This is a default message to display a system message"
     },
     "ads": {
-        "no_room": "بدون اتاق",
-        "area": "{{value}} متر",
-        "rent": "اجاره",
-        "deposit": "ودیعه",
-        "hours_ago": "{{value}} ساعت پیش",
-        "minutes_ago": "{{value}} دقیقه پیش",
-        "special": "ویژه",
-        "gold": "طلایی"
+        "no_room": "No Room",
+        "area": "{{value}} sqm",
+        "rent": "Rent",
+        "deposit": "Deposit",
+        "hours_ago": "{{value}} hours ago",
+        "minutes_ago": "{{value}} minutes ago",
+        "special": "Special",
+        "gold": "Gold"
     },
     "tabs": {
         "home": "Home",
         "messages": "Messages",
         "create_ad": "Create Ad",
         "profile": "Profile"
+    },
+    "header": {
+        "my_hug": "My Hug",
+        "all_provinces": "All Provinces",
+        "search": "Search",
+        "notifications": "Notifications"
+    },
+    "time": {
+        "just_now": "Just now",
+        "minutes_ago": "{{count}} minutes ago",
+        "hours_ago": "{{count}} hours ago",
+        "days_ago": "{{count}} days ago"
+    },
+    "hugs": {
+        "no_ads_nearby": "No ads found nearby",
+        "all_loaded": "All ads loaded"
+    },
+    "common": {
+        "network_error": "Network error. Please try again."
+    },
+    "category": {
+        "title": "Categories",
+        "confirm": "Confirm",
+        "cancel": "Cancel",
+        "search_placeholder": "Search in categories...",
+        "select_all": "Select all groups",
+        "all_categories": "All Categories",
+        "n_selected": "{{count}} categories",
+        "no_results": "No categories found"
     }
 }
