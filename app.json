@@ -7,6 +7,11 @@
     "scheme": "hugapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "usesCleartextTraffic": true,
+    "permissions": [
+      "INTERNET",
+      "ACCESS_NETWORK_STATE"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.parkhcom.hugapp"
