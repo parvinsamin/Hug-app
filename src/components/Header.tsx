@@ -3,7 +3,6 @@ import { Bell, Search, Shield, X } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Animated,
     I18nManager,
     StyleSheet,
     Text,
@@ -36,18 +35,11 @@ export const Header: React.FC<HeaderProps> = ({
     const [searchActive, setSearchActive] = useState(false);
     const [searchText, setSearchText] = useState('');
     const inputRef = useRef<TextInput>(null);
-    const fadeAnim = useRef(new Animated.Value(0)).current;
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const isRTL = I18nManager.isRTL;
 
     useEffect(() => {
-        Animated.timing(fadeAnim, {
-            toValue: searchActive ? 1 : 0,
-            duration: 200,
-            useNativeDriver: true,
-        }).start();
-
         if (searchActive) {
             setTimeout(() => inputRef.current?.focus(), 100);
         }
@@ -58,7 +50,6 @@ export const Header: React.FC<HeaderProps> = ({
     const closeSearch = () => {
         setSearchActive(false);
         setSearchText('');
-        // Clear search in store immediately
         if (debounceRef.current) clearTimeout(debounceRef.current);
         setSearchTitle('');
         inputRef.current?.blur();
@@ -66,7 +57,6 @@ export const Header: React.FC<HeaderProps> = ({
 
     const handleChangeText = (text: string) => {
         setSearchText(text);
-        // Debounce 500ms before updating store → triggers API call
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
             setSearchTitle(text);
@@ -74,76 +64,83 @@ export const Header: React.FC<HeaderProps> = ({
     };
 
     return (
-        <View style={styles.container} onTouchStart={() => console.log('header touched')}>
-            {!searchActive ? (
-                <>
-                    {/* Left: bell + search + divider + location */}
-                    <View style={styles.leftGroup}>
-                        <TouchableOpacity
-                            onPress={onNotificationPress}
-                            style={styles.iconButton}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                            <Bell size={22} color={colors.text} strokeWidth={1.8} />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            onPress={() => {
-                                console.log('search button pressed');
-                                openSearch();
-                            }}
-                            style={styles.iconButton}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                            <Search size={22} color={colors.text} strokeWidth={1.8} />
-                        </TouchableOpacity>
-
-                        <View style={styles.divider} />
-
-                        <TouchableOpacity onPress={onLocationPress} style={styles.locationButton}>
-                            <Text style={styles.locationText}>
-                                {locationLabel ?? t("header.all_provinces")}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Right: logo + label + badge */}
-                    <TouchableOpacity style={styles.rightGroup} onPress={onMyHugPress}>
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>
-                                {hugCount > 999 ? "999+" : hugCount}
-                            </Text>
-                        </View>
-                        <Text style={styles.myHugText}>{t("header.my_hug")}</Text>
-                        <View style={styles.logoCircle}>
-                            <Shield size={20} color={colors.primary} strokeWidth={2} />
-                        </View>
-                    </TouchableOpacity>
-                </>
-            ) : (
-                /* Search bar replaces header */
-                <Animated.View style={[styles.searchBar, { opacity: fadeAnim }]}>
+        <View>
+            {/* ── Main header row ── */}
+            <View style={styles.container}>
+                {/* Left: bell + search + divider + location */}
+                <View style={styles.leftGroup}>
                     <TouchableOpacity
-                        onPress={closeSearch}
+                        onPress={onNotificationPress}
+                        style={styles.iconButton}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                        <X size={20} color={colors.text} strokeWidth={2} />
+                        <Bell size={22} color={colors.text} strokeWidth={1.8} />
                     </TouchableOpacity>
 
-                    <TextInput
-                        ref={inputRef}
-                        style={[styles.searchInput, { textAlign: isRTL ? 'right' : 'left' }]}
-                        value={searchText}
-                        onChangeText={handleChangeText}
-                        placeholder={t("header.search_placeholder")}
-                        placeholderTextColor={colors.muted}
-                        returnKeyType="search"
-                        autoCorrect={false}
-                        autoCapitalize="none"
-                    />
+                    <TouchableOpacity
+                        onPress={openSearch}
+                        style={styles.iconButton}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                        <Search size={22} color={colors.text} strokeWidth={1.8} />
+                    </TouchableOpacity>
 
-                    <Search size={18} color={colors.muted} strokeWidth={1.8} />
-                </Animated.View>
+                    <View style={styles.divider} />
+
+                    <TouchableOpacity onPress={onLocationPress} style={styles.locationButton}>
+                        <Text style={styles.locationText}>
+                            {locationLabel ?? t("header.all_provinces")}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Right: logo + label + badge */}
+                <TouchableOpacity style={styles.rightGroup} onPress={onMyHugPress}>
+                    <View style={styles.badge}>
+                        <Text style={styles.badgeText}>
+                            {hugCount > 999 ? "999+" : hugCount}
+                        </Text>
+                    </View>
+                    <Text style={styles.myHugText}>{t("header.my_hug")}</Text>
+                    <View style={styles.logoCircle}>
+                        <Shield size={20} color={colors.primary} strokeWidth={2} />
+                    </View>
+                </TouchableOpacity>
+            </View>
+
+            {/* ── Search row — appears below header when active ── */}
+            {searchActive && (
+                <View style={styles.searchContainer}>
+                    <View style={styles.searchBar}>
+                        {/* × close — right side for RTL */}
+                        <TouchableOpacity
+                            onPress={closeSearch}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <X size={18} color={colors.muted} strokeWidth={2} />
+                        </TouchableOpacity>
+
+                        {/* Input */}
+                        <TextInput
+                            ref={inputRef}
+                            style={[
+                                styles.searchInput,
+                                { textAlign: isRTL ? 'right' : 'left' }
+                            ]}
+                            value={searchText}
+                            onChangeText={handleChangeText}
+                            placeholder={t("header.search_placeholder")}
+                            placeholderTextColor={colors.muted}
+                            returnKeyType="search"
+                            autoCorrect={false}
+                            autoCapitalize="none"
+                            underlineColorAndroid="transparent"
+                        />
+
+                        {/* Search icon */}
+                        <Search size={18} color={colors.muted} strokeWidth={1.8} />
+                    </View>
+                </View>
             )}
         </View>
     );
@@ -164,7 +161,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 3,
         elevation: 2,
-        minHeight: 56,
     },
     leftGroup: {
         flexDirection: "row",
@@ -216,15 +212,23 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
     },
+
+    // Search row below header
+    searchContainer: {
+        backgroundColor: colors.surface,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
     searchBar: {
-        flex: 1,
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: colors.background,
+        backgroundColor: colors.surface,
         borderRadius: 10,
         paddingHorizontal: 12,
         height: 40,
         gap: 8,
+        borderWidth: 1,
+        borderColor: colors.border,
     },
     searchInput: {
         flex: 1,
@@ -232,5 +236,8 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: colors.text,
         padding: 0,
+        borderWidth: 0,
+        outlineWidth: 0,
+        outlineColor: 'transparent',
     },
 });

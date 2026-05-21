@@ -20,12 +20,15 @@ export interface AppState {
     locale: LocaleState;
     location?: LocationState;
     searchTitle: string;
+    // Store selected category ids as array (Set is not serializable)
+    selectedCategoryIds: number[];
 
     setDeviceId: (id: string) => void;
     setUserToken: (token: string) => void;
     setLocale: (locale: LocaleState) => void;
     setLocation: (location: LocationState) => void;
     setSearchTitle: (title: string) => void;
+    setSelectedCategoryIds: (ids: number[]) => void;
 }
 
 const storage = Platform.OS === "web"
@@ -39,6 +42,7 @@ export const useAppStore = create<AppState>()(
             userToken: undefined,
             location: undefined,
             searchTitle: '',
+            selectedCategoryIds: [], // empty = all
 
             locale: {
                 country: "ir",
@@ -51,6 +55,7 @@ export const useAppStore = create<AppState>()(
             setLocale: (locale) => set({ locale }),
             setLocation: (location) => set({ location }),
             setSearchTitle: (title) => set({ searchTitle: title }),
+            setSelectedCategoryIds: (ids) => set({ selectedCategoryIds: ids }),
         }),
         {
             name: "hug_app_storage",

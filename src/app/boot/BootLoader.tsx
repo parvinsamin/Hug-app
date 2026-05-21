@@ -5,7 +5,6 @@ import { useEffect, useRef } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
 import { v4 as uuidv4 } from "uuid";
 
-import ENV from "@/src/config";
 import { authService } from "@/src/services/api/auth.service";
 import { geoService } from "@/src/services/api/geo.service";
 import { useAppStore } from "@/src/store/appStore";
@@ -13,35 +12,22 @@ import { applyDirection } from "@/src/utils/i18n-direction";
 
 SplashScreen.preventAutoHideAsync();
 
-// ─── DeviceId key ─────────────────────────────────────────────────────────────
 const DEVICE_ID_KEY = "hug_device_id";
 
-// ─── Get or create deviceId — stored separately from Zustand ─────────────────
 const getOrCreateDeviceId = async (): Promise<string> => {
-    // always use localStorage/sessionStorage directly — not Zustand
-    // this avoids the persist middleware duplicating values
     if (Platform.OS === "web") {
         const saved = localStorage.getItem(DEVICE_ID_KEY);
-        // only use if it's a valid single UUID (no commas)
-        if (saved && !saved.includes(",") && saved.length < 40) {
-            return saved;
-        }
-        // generate fresh UUID
+        if (saved && !saved.includes(",") && saved.length < 40) return saved;
         const newId = uuidv4();
         localStorage.setItem(DEVICE_ID_KEY, newId);
-        // console.log("📱 New deviceId:", newId);
         return newId;
     }
 
-    // mobile — use AsyncStorage directly
     const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
     const saved = await AsyncStorage.getItem(DEVICE_ID_KEY);
-    if (saved && !saved.includes(",") && saved.length < 40) {
-        return saved;
-    }
+    if (saved && !saved.includes(",") && saved.length < 40) return saved;
     const newId = uuidv4();
     await AsyncStorage.setItem(DEVICE_ID_KEY, newId);
-    // console.log("📱 New deviceId:", newId);
     return newId;
 };
 
@@ -52,17 +38,27 @@ export default function BootLoader() {
 
     useEffect(() => {
         init();
-        return () => {
-            mounted.current = false;
-        };
+        return () => { mounted.current = false; };
     }, []);
 
-    // ─── Check internet ──────────────────────────────────────────────────────
+    // ─── Check internet — try geo API directly, more reliable than HEAD ──────
     const isOnline = async (): Promise<boolean> => {
         try {
-            const res = await fetch(ENV.api.mainDomain, { method: "HEAD" });
-            return res.ok;
-        } catch {
+            console.log('🌐 Checking online...');
+            const controller = new AbortController();
+            const timeout = setTimeout(() => {
+                console.log('⏰ Request timed out');
+                controller.abort();
+            }, 8000);
+            const res = await fetch("https://hugmerchant.com/api/mobile/geo/whereAmI", {
+                method: "GET",
+                signal: controller.signal,
+            });
+            clearTimeout(timeout);
+            console.log('✅ Online check response:', res.status);
+            return true;
+        } catch (err) {
+            console.log('❌ Online check failed:', err);
             return false;
         }
     };
@@ -71,29 +67,21 @@ export default function BootLoader() {
     const requestLocation = async (): Promise<{ lat: number; long: number } | null> => {
         if (Platform.OS === "web") {
             if (!navigator.geolocation) return null;
-
             return new Promise((resolve) => {
-                // ── Auto-skip after 10 seconds ──
                 const timeout = setTimeout(() => resolve(null), 10000);
-
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
                         clearTimeout(timeout);
                         resolve({ lat: pos.coords.latitude, long: pos.coords.longitude });
                     },
-                    () => {
-                        clearTimeout(timeout);
-                        resolve(null); // just skip, don't show alert
-                    },
+                    () => { clearTimeout(timeout); resolve(null); },
                     { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
                 );
             });
         }
 
-        // mobile
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") return null;
-
         try {
             const loc = await Location.getCurrentPositionAsync({});
             return { lat: loc.coords.latitude, long: loc.coords.longitude };
@@ -104,7 +92,6 @@ export default function BootLoader() {
 
     // ─── Main boot ───────────────────────────────────────────────────────────
     const init = async () => {
-        // console.log("🚀 Boot start");
 
         // 1. check internet
         const online = await isOnline();
@@ -115,6 +102,8 @@ export default function BootLoader() {
         }
 
         // 2. geo → language + direction
+        // Since isOnline already called whereAmI, just call it again
+        // (cached by the time we get here, very fast)
         try {
             const geo = await geoService.whereAmI();
             if (!geo?.data?.countryData) {
@@ -122,42 +111,29 @@ export default function BootLoader() {
                 navigation.dispatch(StackActions.replace("CountryNotSupported"));
                 return;
             }
-            const { code, lang_code, lang_direction } = geo.data.countryData;
+            const { lang_direction } = geo.data.countryData;
             setLocale({ country: 'ir', language: 'fa', direction: 'rtl' });
-            // setLocale({ country: code, language: lang_code, direction: lang_direction });
             await applyDirection(lang_direction);
-        } catch (error) {
-            // console.log("❌ Geo error:", error);
-            await SplashScreen.hideAsync();
-            navigation.dispatch(StackActions.replace("NetworkError"));
-            return;
+        } catch {
+            // If geo fails after online check passes, just use defaults and continue
+            setLocale({ country: 'ir', language: 'fa', direction: 'rtl' });
+            await applyDirection('rtl');
         }
 
-        // 3. get clean deviceId + fastRegister
+        // 3. deviceId + fastRegister
         try {
             const deviceId = await getOrCreateDeviceId();
-
-            // ✅ save clean deviceId to store
             setDeviceId(deviceId);
-            // console.log("📱 DeviceId:", deviceId);
-
-            // register device with server
-            const authRes = await authService.fastRegister(deviceId);
-            // console.log("🔑 fastRegister:", authRes.result, authRes.message);
-
-        } catch (error) {
-            // console.log("❌ Auth error:", error);
+            await authService.fastRegister(deviceId);
+        } catch {
             // non-fatal
         }
 
         // 4. location
         const location = await requestLocation();
-        if (location) {
-            setLocation(location);
-            // console.log("📍 Location:", location);
-        }
+        if (location) setLocation(location);
 
-        // 5. go to splash
+        // 5. go to app
         if (mounted.current) {
             await SplashScreen.hideAsync();
             navigation.dispatch(StackActions.replace("Splash"));
