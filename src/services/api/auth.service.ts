@@ -1,15 +1,15 @@
-import { apiPost } from "./client"
+import { apiClient } from "./client"
 import { endpoints } from "./endpoints"
 import { FastRegisterResponse } from "./types"
 
-export async function fastRegister(deviceId: string) {
-    return apiPost<FastRegisterResponse>(
-        endpoints.auth.fastRegister,
-        {
-            headers: {
+export const authService = {
+    fastRegister: (deviceId: string) =>
+        apiClient.post<FastRegisterResponse>(
+            endpoints.auth.fastRegister,
+            undefined,
+            {
                 deviceid: deviceId,
                 "x-culture": "fa-IR",
-            },
-        }
-    )
+            }
+        )
 }

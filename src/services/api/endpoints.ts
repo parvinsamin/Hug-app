@@ -7,10 +7,12 @@ export const endpoints = {
     },
 
     hugs: {
-        list: "/hugs",
-        create: "/hugs",
-        update: "/hugs",
-        delete: "/hugs"
-    }
-
+        list: "/ads/getHugsList",
+        create: "/ads/create",
+        update: "/ads/update",
+        delete: "/ads/delete"
+    },
+    categories: {
+        list: '/category/getTranslatedCategories',
+    },
 }

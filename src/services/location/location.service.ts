@@ -31,7 +31,7 @@ export class GeoLocationService {
         const { status } = await Location.requestForegroundPermissionsAsync();
 
         if (status !== 'granted') {
-            console.log('[GeoLocation] Permission denied by user');
+            // console.log('[GeoLocation] Permission denied by user');
             return false;
         }
         return true;

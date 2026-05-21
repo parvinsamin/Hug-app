@@ -12,7 +12,7 @@ export type FastRegisterResponse = {
     result: boolean
     message: string
     statusCode: number
-    accessToken?: string
+    accessToken: string
     refreshToken?: string
     data: User[]
 }

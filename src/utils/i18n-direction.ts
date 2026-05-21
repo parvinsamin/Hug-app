@@ -4,7 +4,7 @@ export async function applyDirection(direction: "rtl" | "ltr") {
     const isRTL = direction === "rtl";
 
     if (Platform.OS === "web") {
-        console.log("🌐 Web: skipping RTL management");
+        // console.log("🌐 Web: skipping RTL management");
         return;
     }
 
@@ -13,7 +13,6 @@ export async function applyDirection(direction: "rtl" | "ltr") {
     I18nManager.allowRTL(isRTL);
     I18nManager.forceRTL(isRTL);
 
-    // ری‌استارت سریع (فقط برای دیباگ)
     if (__DEV__) {
         DevSettings.reload();
     } else {
