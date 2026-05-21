@@ -15,7 +15,8 @@ interface CategoryChipsProps {
 }
 
 const getAllIds = (node: CategoryNode): number[] => {
-    const ids: number[] = [node.id];
+    // ✅ use category_id — this is what the API expects
+    const ids: number[] = [node.category_id];
     node.children.forEach(c => ids.push(...getAllIds(c)));
     return ids;
 };

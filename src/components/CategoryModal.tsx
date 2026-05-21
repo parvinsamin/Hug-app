@@ -36,7 +36,8 @@ interface CategoryModalProps {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getAllIds(node: CategoryNode): number[] {
-    const ids: number[] = [node.id];
+    // ✅ use category_id — this is what the API expects
+    const ids: number[] = [node.category_id];
     node.children.forEach(c => ids.push(...getAllIds(c)));
     return ids;
 }
@@ -47,7 +48,7 @@ function countLeaves(node: CategoryNode): number {
 }
 
 function countSelectedLeaves(node: CategoryNode, sel: SelectedCategories): number {
-    if (node.children.length === 0) return sel.has(node.id) ? 1 : 0;
+    if (node.children.length === 0) return sel.has(node.category_id) ? 1 : 0;
     return node.children.reduce((s, c) => s + countSelectedLeaves(c, sel), 0);
 }
 
@@ -132,7 +133,7 @@ export default function CategoryModal({
     };
 
     // ── Select all ────────────────────────────────────────────────────────────
-    const allIds = useMemo(() => allFlat.map(n => n.id), [allFlat]);
+    const allIds = useMemo(() => allFlat.map(n => n.category_id), [allFlat]);
 
     const globalState: CheckState = useMemo(() => {
         if (allIds.length === 0) return 'none';
@@ -164,7 +165,7 @@ export default function CategoryModal({
 
     // ── Leaf count ────────────────────────────────────────────────────────────
     const leafIds = useMemo(
-        () => allFlat.filter(n => n.children.length === 0).map(n => n.id),
+        () => allFlat.filter(n => n.children.length === 0).map(n => n.category_id),
         [allFlat]
     );
     const selectedLeafCount = leafIds.filter(id => selected.has(id)).length;

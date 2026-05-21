@@ -64,8 +64,7 @@ const getTimeAgo = (dateStr: string, t: (key: string, opts?: any) => string): st
 };
 
 export default function HomeAdsList() {
-    // searchTitle is set by Header via appStore (debounced 500ms)
-    const { location, searchTitle } = useAppStore();
+    const { location, searchTitle, selectedCategoryIds, setSelectedCategoryIds } = useAppStore();
     const { t } = useTranslation();
 
     const pageRef = useRef(1);
@@ -78,25 +77,58 @@ export default function HomeAdsList() {
     const [error, setError] = useState<string | null>(null);
 
     const [tree, setTree] = useState<CategoryNode[]>([]);
-    const [selectedCategories, setSelectedCategories] = useState<SelectedCategories>(new Set());
-    const [categoryId, setCategoryId] = useState('all');
+
+    // Restore selected categories from store (empty = all)
+    const [selectedCategories, setSelectedCategories] = useState<SelectedCategories>(
+        new Set(selectedCategoryIds)
+    );
+
+    // categoryId for API: always 'all' until we have a way to know total count
+    // We compare selected count vs total tree size — if equal, send 'all'
+    const allTreeIds = React.useMemo(() => {
+        const flat: number[] = [];
+        const traverse = (nodes: CategoryNode[]) =>
+            // ✅ use category_id not id
+            nodes.forEach(n => { flat.push(n.category_id); traverse(n.children); });
+        traverse(tree);
+        return flat;
+    }, [tree]);
+
+    // Ensure selectedCategoryIds is always a plain array before joining
+    const safeCategoryIds = Array.isArray(selectedCategoryIds) ? selectedCategoryIds : [];
+    const categoryId = (safeCategoryIds.length === 0 || safeCategoryIds.length === allTreeIds.length)
+        ? 'all'
+        : safeCategoryIds.map(Number).join(',');
 
     const hasMore = hugs.length < totalCount && totalCount > 0;
 
     useEffect(() => {
         fetchCategories()
-            .then(flat => setTree(buildCategoryTree(flat)))
+            .then(flat => {
+                const built = buildCategoryTree(flat);
+                setTree(built);
+
+                // If no cached selection → select all IDs by default
+                if (selectedCategoryIds.length === 0) {
+                    const allFlat: CategoryNode[] = [];
+                    const traverse = (nodes: CategoryNode[]) =>
+                        nodes.forEach(n => { allFlat.push(n); traverse(n.children); });
+                    traverse(built);
+                    // ✅ use category_id not id
+                    const allIds = allFlat.map(n => n.category_id);
+                    setSelectedCategories(new Set(allIds));
+                    setSelectedCategoryIds(allIds);
+                }
+            })
             .catch(() => { });
     }, []);
 
     const handleCategoryConfirm = (newSelected: SelectedCategories) => {
         setSelectedCategories(newSelected);
-        const id = newSelected.size === 0
-            ? 'all'
-            : Array.from(newSelected).join(',');
-        setCategoryId(id);
+        // Persist to store as plain number array
+        const ids = Array.from(newSelected).map(Number);
+        setSelectedCategoryIds(ids);
     };
-
     const fetchHugs = async (pageNum: number, replace = false) => {
         if (loadingRef.current) return;
         loadingRef.current = true;
@@ -104,21 +136,20 @@ export default function HomeAdsList() {
         setError(null);
 
         try {
-            const params = new URLSearchParams({
-                categoryId,
-                distance: DISTANCE.toString(),
-                distance_type: DISTANCE_TYPE,
-                title: searchTitle, // from appStore
-                page: pageNum.toString(),
-                wifi: 'Hilda.Hana-2.4',
-            });
-
-            if (location?.lat) params.append('lat', location.lat.toString());
-            if (location?.long) params.append('long', location.long.toString());
+            // Build query string manually to avoid encoding commas in categoryId
+            let query = `categoryId=${safeCategoryIds.map(Number).join(',')}`;
+            query += `&distance=${DISTANCE}`;
+            query += `&distance_type=${DISTANCE_TYPE}`;
+            query += `&title=${encodeURIComponent(searchTitle)}`;
+            query += `&page=${pageNum}`;
+            query += `&wifi=`;
+            if (location?.lat) query += `&lat=${location.lat}`;
+            if (location?.long) query += `&long=${location.long}`;
 
             const res = await apiClient.get<HugsListResponse>(
-                `${endpoints.hugs.list}?${params.toString()}`
+                `${endpoints.hugs.list}?${query}`
             );
+
 
             if (res.result === true && Array.isArray(res.data?.result)) {
                 const items = res.data.result as HugItem[];
@@ -143,7 +174,6 @@ export default function HomeAdsList() {
         }
     };
 
-    // Reload when location, categoryId, or searchTitle changes
     useEffect(() => {
         fetchHugs(1, true);
     }, [location?.lat, location?.long, categoryId, searchTitle]);
@@ -192,25 +222,17 @@ export default function HomeAdsList() {
 
     return (
         <View style={{ flex: 1, backgroundColor: colors.background }}>
-
-            {/* 1. System banner */}
             <SystemBanner />
-
-            {/* 2. Category chips — only when filtered */}
             <CategoryChips
                 tree={tree}
                 selected={selectedCategories}
                 onRemove={handleCategoryConfirm}
             />
-
-            {/* 3. Filter bar */}
             <FilterBar
                 tree={tree}
                 selected={selectedCategories}
                 onCategoryConfirm={handleCategoryConfirm}
             />
-
-            {/* 4. Ads list — spinner only here */}
             {loading && hugs.length === 0 ? (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                     <ActivityIndicator size="large" color={colors.primary} />
