@@ -1,13 +1,13 @@
 import { useTheme } from "@/src/context/ThemeProvider";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useTranslation } from "react-i18next";
-import { View } from "react-native";
 
 import { Header } from "@/src/components/Header";
 import AdCreateScreen from "@/src/features/ad-create/AdCreateScreen";
 import MessagesScreen from "@/src/features/messages/MessagesScreen";
 import ProfileScreen from "@/src/features/profile/ProfileScreen";
 import HomeAdsList from "@/src/screens/tabs/home/HomeAdsList";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const Tab = createBottomTabNavigator();
 
@@ -16,7 +16,7 @@ export default function MainTabs() {
   const { theme } = useTheme();
 
   return (
-    <View style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <Header
         hugCount={354}
         onLocationPress={() => console.log("location")}
@@ -55,6 +55,6 @@ export default function MainTabs() {
           options={{ title: t("tabs.profile") }}
         />
       </Tab.Navigator>
-    </View>
+    </SafeAreaView>
   );
 }
