@@ -30,8 +30,8 @@ async function request<T>(
 
     const url = `${ENV.api.baseUrl}${path}`;
 
-    console.log("🌐 URL:", url);
-    console.log("📋 Headers:", JSON.stringify(defaultHeaders));
+    // console.log("🌐 URL:", url);
+    // console.log("📋 Headers:", JSON.stringify(defaultHeaders));
 
     try {
         const response = await fetch(url, {

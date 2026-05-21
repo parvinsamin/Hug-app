@@ -1,16 +1,11 @@
 // src/components/CategoryModal.tsx
-import {
-    CategoryNode,
-    buildCategoryTree,
-    fetchCategories,
-} from '@/src/services/api/category.service';
+import { CategoryNode } from '@/src/services/api/category.service';
 import { colors } from '@/src/theme/colors';
 import { fonts } from '@/src/theme/fonts';
 import { ArrowLeft, Check, ChevronLeft, Minus, Search } from 'lucide-react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
     FlatList,
     Modal,
     Pressable,
@@ -31,8 +26,8 @@ interface StackEntry {
 
 interface CategoryModalProps {
     visible: boolean;
-    /** If provided, modal shows only this node's children */
-    rootNode?: CategoryNode | null;
+    /** Pre-built tree passed from parent — no loading needed */
+    tree: CategoryNode[];
     onClose: () => void;
     onConfirm: (selected: SelectedCategories) => void;
     initialSelected?: SelectedCategories;
@@ -83,7 +78,7 @@ function Checkbox({ state, onPress }: { state: CheckState; onPress: () => void }
 
 export default function CategoryModal({
     visible,
-    rootNode,
+    tree,
     onClose,
     onConfirm,
     initialSelected = new Set(),
@@ -97,13 +92,7 @@ export default function CategoryModal({
     const selectedRef = useRef(selected);
     selectedRef.current = selected;
 
-    // Root list: if rootNode provided show its children, else show full tree
-    const rootList = useMemo(() => {
-        if (rootNode) return rootNode.children;
-        return [];
-    }, [rootNode]);
-
-    const currentList = stack.length > 0 ? stack[stack.length - 1].list : rootList;
+    const currentList = stack.length > 0 ? stack[stack.length - 1].list : tree;
 
     useEffect(() => {
         if (visible) {
@@ -113,19 +102,19 @@ export default function CategoryModal({
         }
     }, [visible]);
 
-    // ── Flatten current branch for search ─────────────────────────────────────
-    const branchFlat = useMemo(() => {
+    // ── Flatten for search ────────────────────────────────────────────────────
+    const allFlat = useMemo(() => {
         const result: CategoryNode[] = [];
         const traverse = (nodes: CategoryNode[]) =>
             nodes.forEach(n => { result.push(n); traverse(n.children); });
-        traverse(rootList);
+        traverse(tree);
         return result;
-    }, [rootList]);
+    }, [tree]);
 
     const searchResults = useMemo(() => {
         if (!search.trim()) return [];
-        return branchFlat.filter(n => n.translate.includes(search.trim()));
-    }, [search, branchFlat]);
+        return allFlat.filter(n => n.translate.includes(search.trim()));
+    }, [search, allFlat]);
 
     // ── Toggle ────────────────────────────────────────────────────────────────
     const toggleNode = (node: CategoryNode) => {
@@ -142,40 +131,20 @@ export default function CategoryModal({
         });
     };
 
-    // ── Select all (within this branch) ──────────────────────────────────────
-    const branchIds = useMemo(() => branchFlat.map(n => n.id), [branchFlat]);
-
-    // Also include the rootNode itself
-    const allBranchIds = useMemo(() => {
-        if (!rootNode) return branchIds;
-        return [rootNode.id, ...branchIds];
-    }, [rootNode, branchIds]);
+    // ── Select all ────────────────────────────────────────────────────────────
+    const allIds = useMemo(() => allFlat.map(n => n.id), [allFlat]);
 
     const globalState: CheckState = useMemo(() => {
-        if (allBranchIds.length === 0) return 'none';
-        const count = allBranchIds.filter(id => selected.has(id)).length;
+        if (allIds.length === 0) return 'none';
+        const count = allIds.filter(id => selected.has(id)).length;
         if (count === 0) return 'none';
-        if (count === allBranchIds.length) return 'full';
+        if (count === allIds.length) return 'full';
         return 'partial';
-    }, [allBranchIds, selected]);
+    }, [allIds, selected]);
 
     const handleSelectAll = () => {
-        setSelected(prev => {
-            const next = new Set(prev);
-            if (globalState === 'full') {
-                allBranchIds.forEach(id => next.delete(id));
-            } else {
-                allBranchIds.forEach(id => next.add(id));
-            }
-            return next;
-        });
+        setSelected(globalState === 'full' ? new Set() : new Set(allIds));
     };
-
-    const leafIds = useMemo(
-        () => branchFlat.filter(n => n.children.length === 0).map(n => n.id),
-        [branchFlat]
-    );
-    const selectedLeafCount = leafIds.filter(id => selected.has(id)).length;
 
     // ── Navigation ────────────────────────────────────────────────────────────
     const drillInto = (node: CategoryNode) => {
@@ -193,7 +162,14 @@ export default function CategoryModal({
         onClose();
     };
 
-    // ── Render ────────────────────────────────────────────────────────────────
+    // ── Leaf count ────────────────────────────────────────────────────────────
+    const leafIds = useMemo(
+        () => allFlat.filter(n => n.children.length === 0).map(n => n.id),
+        [allFlat]
+    );
+    const selectedLeafCount = leafIds.filter(id => selected.has(id)).length;
+
+    // ── Render item ───────────────────────────────────────────────────────────
     const displayList = search.trim() ? searchResults : currentList;
 
     const renderItem = ({ item }: { item: CategoryNode }) => {
@@ -214,7 +190,7 @@ export default function CategoryModal({
                     }
                 </Pressable>
 
-                {/* LABEL center — tap drills or toggles */}
+                {/* LABEL center */}
                 <Pressable
                     style={styles.rowLabelArea}
                     onPress={() => hasChildren ? drillInto(item) : toggleNode(item)}
@@ -224,7 +200,7 @@ export default function CategoryModal({
                     </Text>
                 </Pressable>
 
-                {/* CHECKBOX right — always toggles */}
+                {/* CHECKBOX right */}
                 <Checkbox state={state} onPress={() => toggleNode(item)} />
             </View>
         );
@@ -232,7 +208,7 @@ export default function CategoryModal({
 
     const headerTitle = stack.length > 0
         ? stack[stack.length - 1].node.translate
-        : rootNode?.translate ?? t('category.title');
+        : t('category.title');
 
     return (
         <Modal
@@ -257,14 +233,14 @@ export default function CategoryModal({
                     </Pressable>
                 </View>
 
-                {/* Back row when drilled in */}
+                {/* Back row */}
                 {stack.length > 0 && (
                     <Pressable style={styles.backRow} onPress={goBack}>
                         <ArrowLeft size={18} color={colors.primary} />
                         <Text style={styles.backText}>
                             {stack.length > 1
                                 ? stack[stack.length - 2].node.translate
-                                : rootNode?.translate ?? t('category.title')}
+                                : t('category.title')}
                         </Text>
                     </Pressable>
                 )}
@@ -284,49 +260,40 @@ export default function CategoryModal({
                     </View>
                 </View>
 
-                {/* Select all for this branch */}
+                {/* Select all */}
                 {!search.trim() && (
                     <>
                         <Pressable style={styles.selectAllRow} onPress={handleSelectAll}>
                             <View style={styles.countBadge}>
                                 <Text style={styles.countBadgeText}>{selectedLeafCount}</Text>
                             </View>
-                            <Text style={styles.selectAllText}>
-                                {t('category.select_all')} {rootNode?.translate}
-                            </Text>
+                            <Text style={styles.selectAllText}>{t('category.select_all')}</Text>
                             <Checkbox state={globalState} onPress={handleSelectAll} />
                         </Pressable>
                         <View style={styles.divider} />
                     </>
                 )}
 
-                {/* List */}
-                {currentList.length === 0 ? (
-                    <View style={styles.center}>
-                        <ActivityIndicator size="large" color={colors.primary} />
-                    </View>
-                ) : (
-                    <FlatList
-                        key={`${rootNode?.category_id}-${stack.length}`}
-                        data={displayList}
-                        keyExtractor={item => `${item.category_id}-${stack.length}`}
-                        renderItem={renderItem}
-                        extraData={selected}
-                        ItemSeparatorComponent={() => <View style={styles.divider} />}
-                        ListEmptyComponent={
-                            <View style={styles.center}>
-                                <Text style={styles.errorText}>{t('category.no_results')}</Text>
-                            </View>
-                        }
-                    />
-                )}
+                {/* List — no loading since tree is passed from parent */}
+                <FlatList
+                    key={`list-${stack.length}`}
+                    data={displayList}
+                    keyExtractor={item => `${item.category_id}-${stack.length}`}
+                    renderItem={renderItem}
+                    extraData={selected}
+                    ItemSeparatorComponent={() => <View style={styles.divider} />}
+                    ListEmptyComponent={
+                        <View style={styles.center}>
+                            <Text style={styles.errorText}>{t('category.no_results')}</Text>
+                        </View>
+                    }
+                />
 
             </SafeAreaView>
         </Modal>
     );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: colors.surface },
     topBar: {

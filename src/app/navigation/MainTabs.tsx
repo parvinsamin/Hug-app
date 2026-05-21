@@ -1,7 +1,6 @@
 import { useTheme } from "@/src/context/ThemeProvider";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, View } from "react-native";
 
 import { Header } from "@/src/components/Header";
 import AdCreateScreen from "@/src/features/ad-create/AdCreateScreen";
@@ -16,54 +15,45 @@ export default function MainTabs() {
   const { theme } = useTheme();
 
   return (
-    <View style={styles.container}>
-      {/* ── Global header — visible on all tabs ── */}
-      <Header
-        hugCount={354}
-        onLocationPress={() => console.log("location")}
-        onSearchPress={() => console.log("search")}
-        onNotificationPress={() => console.log("notifications")}
-        onMyHugPress={() => console.log("my hug")}
+    <Tab.Navigator
+      screenOptions={{
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.text + "80",
+        tabBarStyle: {
+          backgroundColor: theme.colors.background,
+          borderTopColor: theme.colors.border,
+        },
+        headerShown: true,
+        header: () => (
+          <Header
+            hugCount={354}
+            onLocationPress={() => console.log("location")}
+            onNotificationPress={() => console.log("notifications")}
+            onMyHugPress={() => console.log("my hug")}
+          />
+        ),
+      }}
+    >
+      <Tab.Screen
+        name="Hug"
+        component={HomeAdsList}
+        options={{ title: t("tabs.home") }}
       />
-
-      <Tab.Navigator
-        screenOptions={{
-          tabBarActiveTintColor: theme.colors.primary,
-          tabBarInactiveTintColor: theme.colors.text + "80",
-          tabBarStyle: {
-            backgroundColor: theme.colors.background,
-            borderTopColor: theme.colors.border,
-          },
-          headerShown: false,
-        }}
-      >
-        <Tab.Screen
-          name="Hug"
-          component={HomeAdsList}
-          options={{ title: t("tabs.home") }}
-        />
-        <Tab.Screen
-          name="Messages"
-          component={MessagesScreen}
-          options={{ title: t("tabs.messages") }}
-        />
-        <Tab.Screen
-          name="CreateAd"
-          component={AdCreateScreen}
-          options={{ title: t("tabs.create_ad") }}
-        />
-        <Tab.Screen
-          name="Profile"
-          component={ProfileScreen}
-          options={{ title: t("tabs.profile") }}
-        />
-      </Tab.Navigator>
-    </View>
+      <Tab.Screen
+        name="Messages"
+        component={MessagesScreen}
+        options={{ title: t("tabs.messages") }}
+      />
+      <Tab.Screen
+        name="CreateAd"
+        component={AdCreateScreen}
+        options={{ title: t("tabs.create_ad") }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: t("tabs.profile") }}
+      />
+    </Tab.Navigator>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});

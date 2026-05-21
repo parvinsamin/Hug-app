@@ -9,7 +9,7 @@ export async function loadSplash(locale: string) {
 
         return require("../../assets/splash/splash.en.json"); // fallback
     } catch (e) {
-        console.log("Error loading splash", e);
+        // console.log("Error loading splash", e);
         return require("../../assets/splash/splash.en.json");
     }
 }

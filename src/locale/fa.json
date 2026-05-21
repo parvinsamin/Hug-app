@@ -22,7 +22,8 @@
         "my_hug": "هاگ من",
         "all_provinces": "همه استان‌ها",
         "search": "جستجو",
-        "notifications": "اعلان‌ها"
+        "notifications": "اعلان‌ها",
+        "search_placeholder": "جستجو در آگهی‌ها..."
     },
     "time": {
         "just_now": "همین الان",
@@ -38,7 +39,7 @@
         "network_error": "خطای شبکه. لطفاً دوباره تلاش کنید."
     },
     "category": {
-        "title": "دسته‌بندی‌ها",
+        "title": "دسته‌بندی",
         "confirm": "تایید",
         "cancel": "لغو",
         "search_placeholder": "جستجو در دسته‌بندی‌ها...",
@@ -46,5 +47,11 @@
         "all_categories": "همه دسته‌ها",
         "n_selected": "{{count}} دسته",
         "no_results": "دسته‌ای یافت نشد"
+    },
+    "filter": {
+        "filters": "فیلترها",
+        "from_location": "از مکان",
+        "from_wifi": "از وای‌فای",
+        "active_filters": "ویژگی"
     }
 }

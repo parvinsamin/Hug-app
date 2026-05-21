@@ -4,7 +4,7 @@ export async function applyDirection(direction: "rtl" | "ltr") {
     const isRTL = direction === "rtl";
 
     if (Platform.OS === "web") {
-        console.log("🌐 Web: skipping RTL management");
+        // console.log("🌐 Web: skipping RTL management");
         return;
     }
 

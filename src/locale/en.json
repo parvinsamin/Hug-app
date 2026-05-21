@@ -22,7 +22,8 @@
         "my_hug": "My Hug",
         "all_provinces": "All Provinces",
         "search": "Search",
-        "notifications": "Notifications"
+        "notifications": "Notifications",
+        "search_placeholder": "Search ads..."
     },
     "time": {
         "just_now": "Just now",
@@ -46,5 +47,11 @@
         "all_categories": "All Categories",
         "n_selected": "{{count}} categories",
         "no_results": "No categories found"
+    },
+    "filter": {
+        "filters": "Filters",
+        "from_location": "By Location",
+        "from_wifi": "By Wi-Fi",
+        "active_filters": "filters"
     }
 }

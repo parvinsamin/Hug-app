@@ -16,17 +16,18 @@ export interface LocationState {
 
 export interface AppState {
     deviceId?: string;
-    userToken?: string;     // token from real user login only
+    userToken?: string;
     locale: LocaleState;
     location?: LocationState;
+    searchTitle: string;
 
     setDeviceId: (id: string) => void;
     setUserToken: (token: string) => void;
     setLocale: (locale: LocaleState) => void;
     setLocation: (location: LocationState) => void;
+    setSearchTitle: (title: string) => void;
 }
 
-// ✅ use localStorage on web, AsyncStorage on mobile
 const storage = Platform.OS === "web"
     ? createJSONStorage(() => localStorage)
     : createJSONStorage(() => AsyncStorage);
@@ -37,6 +38,7 @@ export const useAppStore = create<AppState>()(
             deviceId: undefined,
             userToken: undefined,
             location: undefined,
+            searchTitle: '',
 
             locale: {
                 country: "ir",
@@ -48,6 +50,7 @@ export const useAppStore = create<AppState>()(
             setUserToken: (token) => set({ userToken: token }),
             setLocale: (locale) => set({ locale }),
             setLocation: (location) => set({ location }),
+            setSearchTitle: (title) => set({ searchTitle: title }),
         }),
         {
             name: "hug_app_storage",

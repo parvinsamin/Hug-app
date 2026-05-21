@@ -1,140 +1,112 @@
 // src/components/CategoryChips.tsx
-import {
-    CategoryNode,
-    buildCategoryTree,
-    fetchCategories,
-} from '@/src/services/api/category.service';
+import { CategoryNode } from '@/src/services/api/category.service';
 import { colors } from '@/src/theme/colors';
 import { fonts } from '@/src/theme/fonts';
-import React, { useCallback, useEffect, useState } from 'react';
+import { X } from 'lucide-react-native';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
-import CategoryModal, { SelectedCategories } from './CategoryModal';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SelectedCategories } from './CategoryModal';
 
 interface CategoryChipsProps {
-    onSelectionChange?: (categoryId: string) => void;
+    tree: CategoryNode[];
+    selected: SelectedCategories;
+    onRemove: (newSelected: SelectedCategories) => void;
 }
 
-export default function CategoryChips({ onSelectionChange }: CategoryChipsProps) {
+const getAllIds = (node: CategoryNode): number[] => {
+    const ids: number[] = [node.id];
+    node.children.forEach(c => ids.push(...getAllIds(c)));
+    return ids;
+};
+
+export default function CategoryChips({ tree, selected, onRemove }: CategoryChipsProps) {
     const { t } = useTranslation();
 
-    const [tree, setTree] = useState<CategoryNode[]>([]);
-    const [selected, setSelected] = useState<SelectedCategories>(new Set());
-    const [activeRoot, setActiveRoot] = useState<CategoryNode | null>(null);
+    const activeRoots = tree.filter(node => {
+        const check = (n: CategoryNode): boolean =>
+            selected.has(n.id) || n.children.some(check);
+        return check(node);
+    });
 
-    useEffect(() => {
-        fetchCategories()
-            .then(flat => setTree(buildCategoryTree(flat)))
-            .catch(() => { });
-    }, []);
+    if (activeRoots.length === 0) return null;
 
-    // Check if a root node has any selected descendant
-    const hasSelection = (node: CategoryNode): boolean => {
-        if (selected.has(node.id)) return true;
-        return node.children.some(c => hasSelection(c));
-    };
-
-    const handleConfirm = useCallback((newSelected: SelectedCategories) => {
-        setSelected(newSelected);
-        const categoryId = newSelected.size === 0
-            ? 'all'
-            : Array.from(newSelected).join(',');
-        onSelectionChange?.(categoryId);
-    }, [onSelectionChange]);
-
-    const handleClearAll = () => {
-        setSelected(new Set());
-        onSelectionChange?.('all');
+    const removeRoot = (node: CategoryNode) => {
+        const idsToRemove = new Set(getAllIds(node));
+        const next = new Set(selected);
+        idsToRemove.forEach(id => next.delete(id));
+        onRemove(next);
     };
 
     return (
-        <>
-            <View style={styles.container}>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.scroll}
-                >
-                    {/* "All" chip */}
-                    <TouchableOpacity
-                        style={[styles.chip, selected.size === 0 && styles.chipActive]}
-                        onPress={handleClearAll}
-                    >
-                        <Text style={[styles.chipText, selected.size === 0 && styles.chipTextActive]}>
-                            {t('category.all_categories')}
-                        </Text>
-                    </TouchableOpacity>
+        <View style={styles.container}>
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.scroll}
+            >
+                {/* Count chip */}
+                <View style={styles.countChip}>
+                    <Text style={styles.countChipText}>
+                        {activeRoots.length} {t('category.title')}
+                    </Text>
+                </View>
 
-                    {/* One chip per root category */}
-                    {tree.map(node => {
-                        console.log('chip:', node.translate, '| category_id:', node.category_id);
-                        const isActive = hasSelection(node);
-                        return (
-                            <TouchableOpacity
-                                key={node.category_id}
-                                style={[styles.chip, isActive && styles.chipActive]}
-                                onPress={() => setActiveRoot(node)}
-                            >
-                                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                                    {node.translate}
-                                </Text>
-                            </TouchableOpacity>
-                        );
-                    })}
-                </ScrollView>
-            </View>
-
-            {/* Modal — only opens for the tapped root */}
-            {activeRoot !== null && (
-                <CategoryModal
-                    visible={true}
-                    rootNode={activeRoot}
-                    onClose={() => setActiveRoot(null)}
-                    onConfirm={handleConfirm}
-                    initialSelected={selected}
-                />
-            )}
-        </>
+                {/* Active root chips with × */}
+                {activeRoots.map(node => (
+                    <View key={node.category_id} style={styles.chip}>
+                        <TouchableOpacity
+                            onPress={() => removeRoot(node)}
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        >
+                            <X size={12} color={colors.primary} strokeWidth={2.5} />
+                        </TouchableOpacity>
+                        <Text style={styles.chipText}>{node.translate}</Text>
+                    </View>
+                ))}
+            </ScrollView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: colors.surface,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
+        backgroundColor: colors.background, // gray — matches filter bar
     },
     scroll: {
         paddingHorizontal: 12,
-        paddingVertical: 10,
+        paddingVertical: 8,
         gap: 8,
         flexDirection: 'row',
+        alignItems: 'center',
     },
-    chip: {
-        paddingHorizontal: 14,
-        paddingVertical: 7,
+    countChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
         borderRadius: 20,
-        backgroundColor: colors.chip,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    chipActive: {
         backgroundColor: colors.surface,
+        borderWidth: 1.5,
         borderColor: colors.primary,
     },
-    chipText: {
-        fontFamily: fonts.regular,
+    countChipText: {
+        fontFamily: fonts.bold,
         fontSize: 13,
-        color: colors.chipText,
-    },
-    chipTextActive: {
-        fontFamily: fonts.medium,
         color: colors.primary,
+    },
+    chip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 20,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+        gap: 6,
+    },
+    chipText: {
+        fontFamily: fonts.medium,
+        fontSize: 13,
+        color: colors.text,
     },
 });

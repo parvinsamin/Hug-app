@@ -2,9 +2,10 @@ import { StackActions, useNavigation } from "@react-navigation/native";
 import * as Location from "expo-location";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useRef } from "react";
-import { ActivityIndicator, Alert, Linking, Platform, View } from "react-native";
+import { ActivityIndicator, Platform, View } from "react-native";
 import { v4 as uuidv4 } from "uuid";
 
+import ENV from "@/src/config";
 import { authService } from "@/src/services/api/auth.service";
 import { geoService } from "@/src/services/api/geo.service";
 import { useAppStore } from "@/src/store/appStore";
@@ -28,7 +29,7 @@ const getOrCreateDeviceId = async (): Promise<string> => {
         // generate fresh UUID
         const newId = uuidv4();
         localStorage.setItem(DEVICE_ID_KEY, newId);
-        console.log("📱 New deviceId:", newId);
+        // console.log("📱 New deviceId:", newId);
         return newId;
     }
 
@@ -40,7 +41,7 @@ const getOrCreateDeviceId = async (): Promise<string> => {
     }
     const newId = uuidv4();
     await AsyncStorage.setItem(DEVICE_ID_KEY, newId);
-    console.log("📱 New deviceId:", newId);
+    // console.log("📱 New deviceId:", newId);
     return newId;
 };
 
@@ -59,7 +60,7 @@ export default function BootLoader() {
     // ─── Check internet ──────────────────────────────────────────────────────
     const isOnline = async (): Promise<boolean> => {
         try {
-            const res = await fetch("https://hugmerchant.com", { method: "HEAD" });
+            const res = await fetch(ENV.api.mainDomain, { method: "HEAD" });
             return res.ok;
         } catch {
             return false;
@@ -69,50 +70,41 @@ export default function BootLoader() {
     // ─── Request location ────────────────────────────────────────────────────
     const requestLocation = async (): Promise<{ lat: number; long: number } | null> => {
         if (Platform.OS === "web") {
-            if (!navigator.geolocation) {
-                Alert.alert("Location Not Supported", "Your browser does not support location.");
-                return null;
-            }
+            if (!navigator.geolocation) return null;
+
             return new Promise((resolve) => {
-                const tryGetLocation = () => {
-                    navigator.geolocation.getCurrentPosition(
-                        (pos) => resolve({ lat: pos.coords.latitude, long: pos.coords.longitude }),
-                        () => {
-                            Alert.alert(
-                                "Location Required",
-                                "Please allow location in your browser, then press Try Again.",
-                                [
-                                    { text: "Try Again", onPress: () => tryGetLocation() },
-                                    { text: "Skip", style: "cancel", onPress: () => resolve(null) },
-                                ]
-                            );
-                        },
-                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                    );
-                };
-                tryGetLocation();
+                // ── Auto-skip after 10 seconds ──
+                const timeout = setTimeout(() => resolve(null), 10000);
+
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        clearTimeout(timeout);
+                        resolve({ lat: pos.coords.latitude, long: pos.coords.longitude });
+                    },
+                    () => {
+                        clearTimeout(timeout);
+                        resolve(null); // just skip, don't show alert
+                    },
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+                );
             });
         }
 
+        // mobile
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-            Alert.alert(
-                "Location Required",
-                "Please enable location to see ads near you.",
-                [
-                    { text: "Open Settings", onPress: () => Linking.openSettings() },
-                    { text: "Cancel", style: "cancel" },
-                ]
-            );
+        if (status !== "granted") return null;
+
+        try {
+            const loc = await Location.getCurrentPositionAsync({});
+            return { lat: loc.coords.latitude, long: loc.coords.longitude };
+        } catch {
             return null;
         }
-        const loc = await Location.getCurrentPositionAsync({});
-        return { lat: loc.coords.latitude, long: loc.coords.longitude };
     };
 
     // ─── Main boot ───────────────────────────────────────────────────────────
     const init = async () => {
-        console.log("🚀 Boot start");
+        // console.log("🚀 Boot start");
 
         // 1. check internet
         const online = await isOnline();
@@ -131,10 +123,11 @@ export default function BootLoader() {
                 return;
             }
             const { code, lang_code, lang_direction } = geo.data.countryData;
-            setLocale({ country: code, language: lang_code, direction: lang_direction });
+            setLocale({ country: 'ir', language: 'fa', direction: 'rtl' });
+            // setLocale({ country: code, language: lang_code, direction: lang_direction });
             await applyDirection(lang_direction);
         } catch (error) {
-            console.log("❌ Geo error:", error);
+            // console.log("❌ Geo error:", error);
             await SplashScreen.hideAsync();
             navigation.dispatch(StackActions.replace("NetworkError"));
             return;
@@ -146,14 +139,14 @@ export default function BootLoader() {
 
             // ✅ save clean deviceId to store
             setDeviceId(deviceId);
-            console.log("📱 DeviceId:", deviceId);
+            // console.log("📱 DeviceId:", deviceId);
 
             // register device with server
             const authRes = await authService.fastRegister(deviceId);
-            console.log("🔑 fastRegister:", authRes.result, authRes.message);
+            // console.log("🔑 fastRegister:", authRes.result, authRes.message);
 
         } catch (error) {
-            console.log("❌ Auth error:", error);
+            // console.log("❌ Auth error:", error);
             // non-fatal
         }
 
@@ -161,7 +154,7 @@ export default function BootLoader() {
         const location = await requestLocation();
         if (location) {
             setLocation(location);
-            console.log("📍 Location:", location);
+            // console.log("📍 Location:", location);
         }
 
         // 5. go to splash

@@ -4,17 +4,26 @@ import { fonts } from '@/src/theme/fonts';
 import { Bookmark } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Mock attributes pool — replace with API data later ──────────────────────
+const ATTR_POOL = [
+    'بدون اتاق', '۱۵۰۰۰متر', 'اجاره', 'آپارتمان',
+    'ودیعه', '۲ اتاق', '۸۰ متر', 'نوساز', 'تعداد اتاق',
+];
+
+// Stable random attrs per item id — 2 to 3 chips
+function getMockAttrs(id: number): string[] {
+    const count = (id % 2) + 2;
+    const result: string[] = [];
+    for (let i = 0; i < count; i++) {
+        result.push(ATTR_POOL[(id * (i + 7)) % ATTR_POOL.length]);
+    }
+    return result;
+}
 
 interface ListingCardProps {
+    id?: number;
     title?: string;
     image?: string;
     location?: string;
@@ -28,15 +37,13 @@ interface ListingCardProps {
     distance?: number;
     photoCount?: number;
     badge?: 'gold' | 'special';
-    /** Mirrors layout: image on RIGHT, text on LEFT */
     mirrored?: boolean;
     onPress?: () => void;
     onBookmark?: () => void;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function ListingCard({
+    id = 0,
     title = '',
     image,
     location = '',
@@ -56,13 +63,14 @@ export default function ListingCard({
 }: ListingCardProps) {
     const { t } = useTranslation();
 
-    // Feature chips: only non-empty values
-    const chips: string[] = [
-        rooms && rooms !== '' ? rooms : null,
-        area && area > 0 ? t('ads.area', { value: area }) : null,
-    ].filter(Boolean) as string[];
+    // Use API chips if available, else mock
+    const chips: string[] = rooms || area
+        ? [
+            rooms && rooms !== '' ? rooms : null,
+            area && area > 0 ? t('ads.area', { value: area }) : null,
+        ].filter(Boolean) as string[]
+        : getMockAttrs(id);
 
-    // ── Image block ───────────────────────────────────────────────────────────
     const imageBlock = (
         <View style={styles.imageWrapper}>
             {image ? (
@@ -70,7 +78,6 @@ export default function ListingCard({
             ) : (
                 <View style={[styles.image, styles.imagePlaceholder]} />
             )}
-            {/* Photo count badge */}
             {photoCount !== undefined && photoCount > 0 && (
                 <View style={styles.photoCountBadge}>
                     <Text style={styles.photoCountText}>{photoCount} 📷</Text>
@@ -79,18 +86,21 @@ export default function ListingCard({
         </View>
     );
 
-    // ── Text block ────────────────────────────────────────────────────────────
     const textBlock = (
         <View style={styles.textBlock}>
             {/* Bookmark */}
-            <TouchableOpacity style={styles.bookmarkButton} onPress={onBookmark} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity
+                style={styles.bookmarkButton}
+                onPress={onBookmark}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
                 <Bookmark size={18} color={colors.muted} strokeWidth={1.5} />
             </TouchableOpacity>
 
             {/* Title */}
             <Text style={styles.title} numberOfLines={2}>{title}</Text>
 
-            {/* Feature chips */}
+            {/* Attribute chips */}
             {chips.length > 0 && (
                 <View style={styles.chipsRow}>
                     {chips.map((chip, i) => (
@@ -114,8 +124,12 @@ export default function ListingCard({
     );
 
     return (
-        <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
-            {/* Main row: image + text (order flips when mirrored) */}
+        <TouchableOpacity
+            style={styles.card}
+            onPress={onPress}
+            activeOpacity={0.75}
+        >
+            {/* Main row */}
             <View style={[styles.mainRow, mirrored && styles.mainRowMirrored]}>
                 {imageBlock}
                 {textBlock}
@@ -130,9 +144,7 @@ export default function ListingCard({
                             <Text style={styles.priceValue}>{rent}</Text>
                         </View>
                     ) : <View />}
-
                     <View style={styles.priceDivider} />
-
                     {capacity && capacity > 0 ? (
                         <View style={styles.priceItem}>
                             <Text style={styles.priceLabel}>تعداد: </Text>
@@ -161,21 +173,18 @@ export default function ListingCard({
     );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const IMAGE_SIZE = 110;
 
 const styles = StyleSheet.create({
+    // White card, no border, no shadow — gray background between cards creates separation
     card: {
         backgroundColor: colors.surface,
         paddingHorizontal: 16,
         paddingTop: 14,
         paddingBottom: 0,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
+        marginBottom: 8, // gray gap between cards
     },
 
-    // ── Main row ──────────────────────────────────────────────────────────────
     mainRow: {
         flexDirection: 'row',
         gap: 12,
@@ -185,7 +194,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row-reverse',
     },
 
-    // ── Image ─────────────────────────────────────────────────────────────────
     imageWrapper: {
         width: IMAGE_SIZE,
         height: IMAGE_SIZE,
@@ -215,7 +223,6 @@ const styles = StyleSheet.create({
         color: '#fff',
     },
 
-    // ── Text block ────────────────────────────────────────────────────────────
     textBlock: {
         flex: 1,
         alignItems: 'flex-end',
@@ -243,7 +250,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 14,
-        backgroundColor: colors.chip,
+        backgroundColor: colors.chip, // gray chip
         borderWidth: 1,
         borderColor: colors.border,
     },
@@ -266,7 +273,7 @@ const styles = StyleSheet.create({
         textAlign: 'right',
     },
 
-    // ── Price row ─────────────────────────────────────────────────────────────
+    // Price row
     priceRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -296,7 +303,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 8,
     },
 
-    // ── Badge ─────────────────────────────────────────────────────────────────
+    // Badge
     badgeRow: {
         paddingBottom: 12,
         alignItems: 'flex-start',
