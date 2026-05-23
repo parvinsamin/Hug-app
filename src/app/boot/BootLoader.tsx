@@ -50,7 +50,7 @@ export default function BootLoader() {
                 console.log('⏰ Request timed out');
                 controller.abort();
             }, 8000);
-            const res = await fetch("https://hugmerchant.com/api/mobile/geo/whereAmI", {
+            const res = await fetch("https://hugmerchant.com/api/mobile/geo/whereAmIReact", {
                 method: "GET",
                 signal: controller.signal,
             });
