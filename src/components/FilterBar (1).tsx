@@ -62,13 +62,12 @@ export default function FilterBar({ tree, selected, onCategoryConfirm }: FilterB
                     <Wifi size={20} color={colors.text} strokeWidth={1.8} />
                     <Text style={styles.iconLabel}>{t('filter.from_wifi')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.debugButton} onPress={testApi}>
-                    <Text style={styles.debugText}>🔧 Test API</Text>
-                </TouchableOpacity>
             </View>
 
             {/* ── DEBUG: Test API button — remove after testing ── */}
-
+            <TouchableOpacity style={styles.debugButton} onPress={testApi}>
+                <Text style={styles.debugText}>🔧 Test API</Text>
+            </TouchableOpacity>
 
             {/* ── Row 2: attribute chips — gray background ── */}
             {activeAttrCount > 0 && (
