@@ -5,7 +5,7 @@ import { fonts } from '@/src/theme/fonts';
 import { LayoutGrid, MapPin, SlidersHorizontal, Wifi, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import CategoryModal, { SelectedCategories } from './CategoryModal';
 
 const MOCK_ATTRIBUTES = [
@@ -28,6 +28,16 @@ export default function FilterBar({ tree, selected, onCategoryConfirm }: FilterB
 
     const removeAttr = (id: number) => setActiveAttrs(prev => prev.filter(a => a !== id));
     const activeAttrCount = activeAttrs.length;
+
+    const testApi = async () => {
+        try {
+            const res = await fetch('https://hugmerchant.com/api/mobile/geo/whereAmI');
+            const text = await res.text();
+            Alert.alert('Success ✅', text.slice(0, 200));
+        } catch (e: any) {
+            Alert.alert('Error ❌', e.message + ' | ' + e.code);
+        }
+    };
 
     return (
         <>
@@ -52,7 +62,13 @@ export default function FilterBar({ tree, selected, onCategoryConfirm }: FilterB
                     <Wifi size={20} color={colors.text} strokeWidth={1.8} />
                     <Text style={styles.iconLabel}>{t('filter.from_wifi')}</Text>
                 </TouchableOpacity>
+                <TouchableOpacity style={styles.debugButton} onPress={testApi}>
+                    <Text style={styles.debugText}>🔧 Test API</Text>
+                </TouchableOpacity>
             </View>
+
+            {/* ── DEBUG: Test API button — remove after testing ── */}
+
 
             {/* ── Row 2: attribute chips — gray background ── */}
             {activeAttrCount > 0 && (
@@ -62,15 +78,12 @@ export default function FilterBar({ tree, selected, onCategoryConfirm }: FilterB
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.attrsScroll}
                     >
-                        {/* Count badge */}
                         <View style={styles.attrCountChip}>
                             <SlidersHorizontal size={12} color={colors.primary} strokeWidth={2} />
                             <Text style={styles.attrCountText}>
                                 {activeAttrCount} {t('filter.active_filters')}
                             </Text>
                         </View>
-
-                        {/* Active chips with × */}
                         {MOCK_ATTRIBUTES.filter(a => activeAttrs.includes(a.id)).map(attr => (
                             <View key={attr.id} style={styles.attrChipActive}>
                                 <TouchableOpacity
@@ -82,8 +95,6 @@ export default function FilterBar({ tree, selected, onCategoryConfirm }: FilterB
                                 <Text style={styles.attrChipText}>{attr.label}</Text>
                             </View>
                         ))}
-
-                        {/* Inactive chips */}
                         {MOCK_ATTRIBUTES.filter(a => !activeAttrs.includes(a.id)).map(attr => (
                             <TouchableOpacity
                                 key={attr.id}
@@ -118,7 +129,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-around',
-        backgroundColor: colors.background, // gray
+        backgroundColor: colors.background,
         paddingVertical: 10,
     },
     iconButton: {
@@ -136,8 +147,18 @@ const styles = StyleSheet.create({
         height: 28,
         backgroundColor: colors.border,
     },
+    debugButton: {
+        backgroundColor: '#FF6B6B',
+        paddingVertical: 8,
+        alignItems: 'center',
+    },
+    debugText: {
+        color: '#fff',
+        fontFamily: fonts.bold,
+        fontSize: 13,
+    },
     attrsRow: {
-        backgroundColor: colors.background, // gray
+        backgroundColor: colors.background,
     },
     attrsScroll: {
         paddingHorizontal: 12,

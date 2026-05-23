@@ -268,6 +268,7 @@ export default function HomeAdsList() {
                     }
                 />
             )}
+
         </View>
     );
 }
