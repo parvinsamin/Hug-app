@@ -48,3 +48,11 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+///For apk on expo.deva
+eas build --profile preview --platform android
+
+No, adb reverse only affects the USB connection for development — it doesn't touch your APK build at all. They're completely separate.
+
+adb reverse = tells phone to forward port 8081 to your PC (for live development)
+eas build = builds on Expo's cloud servers (doesn't care about adb)

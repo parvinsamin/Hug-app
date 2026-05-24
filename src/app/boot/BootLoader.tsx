@@ -89,56 +89,80 @@ export default function BootLoader() {
             return null;
         }
     };
-
-    // ─── Main boot ───────────────────────────────────────────────────────────
     const init = async () => {
-        console.log('❌ init:');
-        // 1. check internet
-        const online = await isOnline();
-        if (!online) {
+        alert(1)
+        console.log('🚀 Boooot start');
+        console.log('step 1');
+
+        setTimeout(async () => {
+            console.log('timeout fired');
+        }, 1000);
+
+        console.log('step 2');
+
+        try {
+            console.log('step 3');
             await SplashScreen.hideAsync();
-            navigation.dispatch(StackActions.replace("NetworkError"));
-            return;
+            console.log('step 4');
+            navigation.dispatch(StackActions.replace("Splash"));
+            console.log('step 5');
+        } catch (e) {
+            console.log('error:', String(e));
         }
+    };
+    // ─── Main boot ───────────────────────────────────────────────────────────
+    const init1 = async () => {
+        console.log('🚀 Boottt start');
 
-        // 2. geo → language + direction
-        // Since isOnline already called whereAmI, just call it again
-        // (cached by the time we get here, very fast)
+        const safetyTimer = setTimeout(async () => {
+            console.log('⚠️ Boot timeout');
+            await SplashScreen.hideAsync();
+            navigation.dispatch(StackActions.replace("Splash"));
+        }, 15000);
+
         try {
-            const geo = await geoService.whereAmI();
-            if (!geo?.data?.countryData) {
-                await SplashScreen.hideAsync();
-                navigation.dispatch(StackActions.replace("CountryNotSupported"));
-                return;
+            // 2. geo → language + direction
+            try {
+                const geo = await geoService.whereAmI();
+                if (geo?.data?.countryData) {
+                    const { lang_direction } = geo.data.countryData;
+                    setLocale({ country: 'ir', language: 'fa', direction: 'rtl' });
+                    await applyDirection(lang_direction);
+                } else {
+                    setLocale({ country: 'ir', language: 'fa', direction: 'rtl' });
+                    await applyDirection('rtl');
+                }
+            } catch {
+                setLocale({ country: 'ir', language: 'fa', direction: 'rtl' });
+                await applyDirection('rtl');
             }
-            const { lang_direction } = geo.data.countryData;
-            setLocale({ country: 'ir', language: 'fa', direction: 'rtl' });
-            await applyDirection(lang_direction);
+
+            // 3. deviceId + fastRegister
+            try {
+                const deviceId = await getOrCreateDeviceId();
+                setDeviceId(deviceId);
+                await authService.fastRegister(deviceId);
+            } catch { }
+
+            // 4. location
+            try {
+                const location = await requestLocation();
+                if (location) setLocation(location);
+            } catch { }
+
+            // 5. go to app
+            clearTimeout(safetyTimer);
+            if (mounted.current) {
+                await SplashScreen.hideAsync();
+                navigation.dispatch(StackActions.replace("Splash"));
+            }
         } catch {
-            // If geo fails after online check passes, just use defaults and continue
-            setLocale({ country: 'ir', language: 'fa', direction: 'rtl' });
-            await applyDirection('rtl');
-        }
-
-        // 3. deviceId + fastRegister
-        try {
-            const deviceId = await getOrCreateDeviceId();
-            setDeviceId(deviceId);
-            await authService.fastRegister(deviceId);
-        } catch {
-            // non-fatal
-        }
-
-        // 4. location
-        const location = await requestLocation();
-        if (location) setLocation(location);
-
-        // 5. go to app
-        if (mounted.current) {
+            clearTimeout(safetyTimer);
             await SplashScreen.hideAsync();
             navigation.dispatch(StackActions.replace("Splash"));
         }
     };
+
     return (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
             <ActivityIndicator size="large" color="#0099CC" />
