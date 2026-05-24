@@ -5,10 +5,7 @@ import { useEffect, useRef } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
 import { v4 as uuidv4 } from "uuid";
 
-import { authService } from "@/src/services/api/auth.service";
-import { geoService } from "@/src/services/api/geo.service";
 import { useAppStore } from "@/src/store/appStore";
-import { applyDirection } from "@/src/utils/i18n-direction";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -92,54 +89,24 @@ export default function BootLoader() {
 
     // ─── Main boot ───────────────────────────────────────────────────────────
     const init = async () => {
+        alert(2)
+        console.log('🚀 Boot start');
 
-        // 1. check internet
-        const online = await isOnline();
-        if (!online) {
-            await SplashScreen.hideAsync();
-            navigation.dispatch(StackActions.replace("NetworkError"));
-            return;
-        }
-
-        // 2. geo → language + direction
-        // Since isOnline already called whereAmI, just call it again
-        // (cached by the time we get here, very fast)
-        try {
-            const geo = await geoService.whereAmI();
-            if (!geo?.data?.countryData) {
-                await SplashScreen.hideAsync();
-                navigation.dispatch(StackActions.replace("CountryNotSupported"));
-                return;
-            }
-            const { lang_direction } = geo.data.countryData;
-            setLocale({ country: 'ir', language: 'fa', direction: 'rtl' });
-            await applyDirection(lang_direction);
-        } catch {
-            // If geo fails after online check passes, just use defaults and continue
-            setLocale({ country: 'ir', language: 'fa', direction: 'rtl' });
-            await applyDirection('rtl');
-        }
-
-        // 3. deviceId + fastRegister
-        try {
-            const deviceId = await getOrCreateDeviceId();
-            setDeviceId(deviceId);
-            await authService.fastRegister(deviceId);
-        } catch {
-            // non-fatal
-        }
-
-        // 4. location
-        const location = await requestLocation();
-        if (location) setLocation(location);
-
-        // 5. go to app
-        if (mounted.current) {
+        // Safety timeout — if boot takes more than 15 seconds, go to app anyway
+        const safetyTimer = setTimeout(async () => {
+            console.log('⚠️ Boot timeout — forcing navigation');
             await SplashScreen.hideAsync();
             navigation.dispatch(StackActions.replace("Splash"));
+        }, 15000);
+
+        try {
+            // ... rest of your init code ...
+
+            clearTimeout(safetyTimer); // clear if boot completes normally
+        } catch {
+            clearTimeout(safetyTimer);
         }
     };
-
     return (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
             <ActivityIndicator size="large" color="#0099CC" />
