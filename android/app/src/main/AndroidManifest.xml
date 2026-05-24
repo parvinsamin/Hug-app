@@ -27,7 +27,6 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="hugapp"/>
-        <data android:scheme="exp+hug-app"/>
       </intent-filter>
     </activity>
   </application>
