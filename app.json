@@ -14,10 +14,20 @@
     "android": {
       "package": "com.parkhcom.hugapp"
     },
-    "plugins": [
-      "expo-secure-store",
-      "expo-localization"
-    ],
+  "plugins": [
+    "expo-secure-store",
+    "expo-localization",
+    [
+        "expo-build-properties",
+        {
+            "android": {
+                "compileSdkVersion": 35,
+                "targetSdkVersion": 35,
+                "buildToolsVersion": "35.0.0"
+            }
+        }
+    ]
+],
     "extra": {
       "eas": {
         "projectId": "7254169e-36ff-46eb-8993-a0b16a727ed8"
