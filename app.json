@@ -10,32 +10,14 @@
     "usesCleartextTraffic": true,
     "permissions": [
       "INTERNET",
-      "ACCESS_NETWORK_STATE",
-      "ACCESS_COARSE_LOCATION",
-      "ACCESS_FINE_LOCATION"
+      "ACCESS_NETWORK_STATE"
     ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.parkhcom.hugapp"
     },
     "android": {
-      "package": "com.parkhcom.hugapp",
-      "usesCleartextTraffic": true,
-      "permissions": [
-        "INTERNET",
-        "ACCESS_NETWORK_STATE",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
-      ],
-      "networkSecurityConfig": {
-        "domainConfig": [
-          {
-            "domain": "hugmerchant.com",
-            "includeSubdomains": true,
-            "cleartextTrafficPermitted": true
-          }
-        ]
-      }
+      "package": "com.parkhcom.hugapp"
     },
     "plugins": [
       "expo-secure-store",

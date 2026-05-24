@@ -39,8 +39,6 @@ async function request<T>(
             headers: {
                 ...defaultHeaders,
                 ...(options?.headers ?? {}),
-                'Connection': 'keep-alive',
-                'Accept': 'application/json',
             },
             body:
                 method === "GET" || method === "DELETE"
