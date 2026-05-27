@@ -2,10 +2,10 @@
 import { CategoryNode } from '@/src/services/api/category.service';
 import { colors } from '@/src/theme/colors';
 import { fonts } from '@/src/theme/fonts';
-import { LayoutGrid, MapPin, SlidersHorizontal, Wifi, X } from 'lucide-react-native';
+import { ChevronLeft, LayoutGrid, MapPin, SlidersHorizontal, Wifi, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import CategoryModal, { SelectedCategories } from './CategoryModal';
 
 const MOCK_ATTRIBUTES = [
@@ -15,62 +15,154 @@ const MOCK_ATTRIBUTES = [
     { id: 4, label: 'املاک' },
 ];
 
+const ORDER_OPTIONS = [
+    { key: 'nearest', label: 'نزدیک‌ترین‌ها' },
+    { key: 'newest', label: 'جدیدترین‌ها' },
+    { key: 'cheapest', label: 'ارزان‌ترین' },
+    { key: 'expensive', label: 'گران‌ترین' },
+];
+
 interface FilterBarProps {
     tree: CategoryNode[];
     selected: SelectedCategories;
     onCategoryConfirm: (newSelected: SelectedCategories) => void;
+    onOrderChange?: (orderKey: string) => void;
+    onWifiToggle?: (active: boolean) => void;
+    onLocationToggle?: (active: boolean) => void;
+    onFiltersPress?: () => void;
+    hideCategoryButton?: boolean;
+    wifiActive?: boolean;        // 👈 add
+    locationActive?: boolean;
 }
 
-export default function FilterBar({ tree, selected, onCategoryConfirm }: FilterBarProps) {
+export default function FilterBar({
+    tree,
+    selected,
+    onCategoryConfirm,
+    onOrderChange,
+    onWifiToggle,
+    onLocationToggle,
+    onFiltersPress,
+}: FilterBarProps) {
     const { t } = useTranslation();
     const [modalVisible, setModalVisible] = useState(false);
     const [activeAttrs, setActiveAttrs] = useState<number[]>([1, 2]);
+    const [orderIndex, setOrderIndex] = useState(0);
+    const [wifiActive, setWifiActive] = useState(false);
+    const [locationActive, setLocationActive] = useState(true);
+    const [orderMenuVisible, setOrderMenuVisible] = useState(false);
 
     const removeAttr = (id: number) => setActiveAttrs(prev => prev.filter(a => a !== id));
     const activeAttrCount = activeAttrs.length;
 
-    const testApi = async () => {
-        try {
-            const res = await fetch('https://hugmerchant.com/api/mobile/geo/whereAmI');
-            const text = await res.text();
-            Alert.alert('Success ✅', text.slice(0, 200));
-        } catch (e: any) {
-            Alert.alert('Error ❌', e.message + ' | ' + e.code);
-        }
+    const cycleOrder = () => {
+        const next = (orderIndex + 1) % ORDER_OPTIONS.length;
+        setOrderIndex(next);
+        onOrderChange?.(ORDER_OPTIONS[next].key);
+        setOrderMenuVisible(false);
+    };
+
+    const selectOrder = (index: number) => {
+        setOrderIndex(index);
+        onOrderChange?.(ORDER_OPTIONS[index].key);
+        setOrderMenuVisible(false);
+    };
+
+    const toggleWifi = () => {
+        const next = !wifiActive;
+        setWifiActive(next);
+        onWifiToggle?.(next);
+    };
+
+    const toggleLocation = () => {
+        const next = !locationActive;
+        setLocationActive(next);
+        onLocationToggle?.(next);
     };
 
     return (
         <>
-            {/* ── Row 1: filter icons — gray background ── */}
+            {/* ── Row 1: filter icons ── */}
             <View style={styles.iconsRow}>
+
+                {/* LEFT: Ordering button */}
+
+
+                {/* RIGHT: 4 icon buttons */}
                 <TouchableOpacity style={styles.iconButton} onPress={() => setModalVisible(true)}>
                     <LayoutGrid size={20} color={colors.text} strokeWidth={1.8} />
                     <Text style={styles.iconLabel}>{t('category.title')}</Text>
                 </TouchableOpacity>
+
                 <View style={styles.iconDivider} />
-                <TouchableOpacity style={styles.iconButton}>
+
+
+                <TouchableOpacity style={styles.iconButton} onPress={onFiltersPress}>
                     <SlidersHorizontal size={20} color={colors.text} strokeWidth={1.8} />
                     <Text style={styles.iconLabel}>{t('filter.filters')}</Text>
                 </TouchableOpacity>
                 <View style={styles.iconDivider} />
-                <TouchableOpacity style={styles.iconButton}>
-                    <MapPin size={20} color={colors.primary} strokeWidth={1.8} />
-                    <Text style={[styles.iconLabel, { color: colors.primary }]}>{t('filter.from_location')}</Text>
+
+                <TouchableOpacity style={styles.iconButton} onPress={toggleLocation}>
+                    <MapPin
+                        size={20}
+                        color={locationActive ? colors.primary : colors.text}
+                        strokeWidth={1.8}
+                    />
+                    <Text style={[styles.iconLabel, locationActive && { color: colors.primary }]}>
+                        {t('filter.from_location')}
+                    </Text>
                 </TouchableOpacity>
+
                 <View style={styles.iconDivider} />
-                <TouchableOpacity style={styles.iconButton}>
-                    <Wifi size={20} color={colors.text} strokeWidth={1.8} />
-                    <Text style={styles.iconLabel}>{t('filter.from_wifi')}</Text>
+
+                <TouchableOpacity style={styles.iconButton} onPress={toggleWifi}>
+                    <Wifi
+                        size={20}
+                        color={wifiActive ? colors.primary : colors.text}
+                        strokeWidth={1.8}
+                    />
+                    <Text style={[styles.iconLabel, wifiActive && { color: colors.primary }]}>
+                        {t('filter.from_wifi')}
+                    </Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.debugButton} onPress={testApi}>
-                    <Text style={styles.debugText}>🔧 Test API</Text>
+
+                <View style={styles.iconDivider} />
+
+                <TouchableOpacity
+                    style={styles.orderButton}
+                    onPress={() => setOrderMenuVisible(v => !v)}
+                    activeOpacity={0.7}
+                >
+                    <ChevronLeft size={14} color={colors.primary} strokeWidth={2.5} />
+                    <Text style={styles.orderLabel} numberOfLines={1}>
+                        {ORDER_OPTIONS[orderIndex].label}
+                    </Text>
                 </TouchableOpacity>
+
             </View>
 
-            {/* ── DEBUG: Test API button — remove after testing ── */}
+            {/* ── Order dropdown menu ── */}
+            {orderMenuVisible && (
+                <View style={styles.orderMenu}>
+                    {ORDER_OPTIONS.map((opt, i) => (
+                        <TouchableOpacity
+                            key={opt.key}
+                            style={[styles.orderMenuItem, i === orderIndex && styles.orderMenuItemActive]}
+                            onPress={() => selectOrder(i)}
+                        >
+                            <Text style={[
+                                styles.orderMenuText,
+                                i === orderIndex && { color: colors.primary, fontFamily: fonts.bold }
+                            ]}>
+                                {opt.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
 
-
-            {/* ── Row 2: attribute chips — gray background ── */}
+            {/* ── Row 2: attribute chips ── */}
             {activeAttrCount > 0 && (
                 <View style={styles.attrsRow}>
                     <ScrollView
@@ -128,10 +220,60 @@ const styles = StyleSheet.create({
     iconsRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-around',
         backgroundColor: colors.background,
         paddingVertical: 10,
+        paddingHorizontal: 4,
     },
+
+    /* Ordering button — left side, wider */
+    orderButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 2,
+        paddingHorizontal: 8,
+        minWidth: 100,
+    },
+    orderLabel: {
+        fontFamily: fonts.bold,
+        fontSize: 12,
+        color: colors.primary,
+        textAlign: 'right',
+    },
+
+    /* Order dropdown */
+    orderMenu: {
+        position: 'absolute',
+        top: 44,          // sits just below the icons row
+        left: 8,
+        backgroundColor: colors.surface,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: colors.border,
+        zIndex: 999,
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        overflow: 'hidden',
+        minWidth: 140,
+    },
+    orderMenuItem: {
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+    },
+    orderMenuItemActive: {
+        backgroundColor: colors.primaryLight ?? '#EEF4FF',
+    },
+    orderMenuText: {
+        fontFamily: fonts.regular,
+        fontSize: 13,
+        color: colors.text,
+        textAlign: 'right',
+    },
+
+    /* Icon buttons */
     iconButton: {
         alignItems: 'center',
         gap: 4,
@@ -147,16 +289,8 @@ const styles = StyleSheet.create({
         height: 28,
         backgroundColor: colors.border,
     },
-    debugButton: {
-        backgroundColor: '#FF6B6B',
-        paddingVertical: 8,
-        alignItems: 'center',
-    },
-    debugText: {
-        color: '#fff',
-        fontFamily: fonts.bold,
-        fontSize: 13,
-    },
+
+    /* Attribute chips row */
     attrsRow: {
         backgroundColor: colors.background,
     },

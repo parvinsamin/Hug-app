@@ -2,27 +2,38 @@
 import CategoryChips from '@/src/components/CategoryChips';
 import { SelectedCategories } from '@/src/components/CategoryModal';
 import FilterBar from '@/src/components/FilterBar';
+import FilterModal, { FilterState } from '@/src/components/FilterModal';
 import ListingCard from '@/src/components/ListingCard';
 import SystemBanner from '@/src/components/SystemBanner';
 import ENV from '@/src/config';
-import {
-    CategoryNode,
-    buildCategoryTree,
-    fetchCategories,
-} from '@/src/services/api/category.service';
+import { CategoryNode } from '@/src/services/api/category.service';
 import { apiClient } from '@/src/services/api/client';
 import { endpoints } from '@/src/services/api/endpoints';
 import { useAppStore } from '@/src/store/appStore';
 import { colors } from '@/src/theme/colors';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     FlatList,
     RefreshControl,
     Text,
+    useWindowDimensions,
     View,
 } from 'react-native';
+
+const PROMO_CARD = {
+    id: -1,
+    title: 'خانه بومگردی- خانه بومگردی زیبا با امکانات کامل برای مسافران',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/24701-nature-natural-beauty.jpg/1280px-24701-nature-natural-beauty.jpg',
+    address: 'سیستان و بلوچستان، زاهدان، کاظم آباد',
+    timeAgo: '۵ساعت پیش',
+    category: 'بدون اتاق',
+    rooms: 'بدون اتاق',
+    area: 15000,
+    capacity: 4,
+    rent: '۵۰٬۰۰۰٬۰۰۰',
+};
 
 interface HugItem {
     id: number;
@@ -49,8 +60,12 @@ interface HugsListResponse {
     };
 }
 
-const DISTANCE = 3;
-const DISTANCE_TYPE = 'k';
+interface HomeAdsListProps {
+    tree: CategoryNode[];
+    selectedCategories: SelectedCategories;
+    onCategoryConfirm: (newSelected: SelectedCategories) => void;
+    isWide?: boolean;
+}
 
 const getTimeAgo = (dateStr: string, t: (key: string, opts?: any) => string): string => {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -63,38 +78,50 @@ const getTimeAgo = (dateStr: string, t: (key: string, opts?: any) => string): st
     return t('time.days_ago', { count: days });
 };
 
-export default function HomeAdsList() {
+const SIDEBAR_WIDTH = 190;
+const CARD_MIN_WIDTH = 280;
+
+const DEFAULT_FILTER: FilterState = {
+    distance: 3,
+    distanceType: 'k',
+    locationActive: true,
+    wifiActive: false,
+    manualRefresh: false,
+};
+
+export default function HomeAdsList({
+    tree,
+    selectedCategories,
+    onCategoryConfirm,
+    isWide = false,
+}: HomeAdsListProps) {
     const { location, searchTitle, selectedCategoryIds, setSelectedCategoryIds } = useAppStore();
     const { t } = useTranslation();
+    const { width } = useWindowDimensions();
+
+    const feedWidth = isWide ? width - SIDEBAR_WIDTH : width;
+    const numColumns = isWide ? Math.max(3, Math.floor(feedWidth / CARD_MIN_WIDTH)) : 1;
 
     const pageRef = useRef(1);
     const loadingRef = useRef(false);
+    const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const [hugs, setHugs] = useState<HugItem[]>([]);
     const [totalCount, setTotalCount] = useState(0);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [filterModalVisible, setFilterModalVisible] = useState(false);
+    const [filterState, setFilterState] = useState<FilterState>(DEFAULT_FILTER);
 
-    const [tree, setTree] = useState<CategoryNode[]>([]);
-
-    // Restore selected categories from store (empty = all)
-    const [selectedCategories, setSelectedCategories] = useState<SelectedCategories>(
-        new Set(selectedCategoryIds)
-    );
-
-    // categoryId for API: always 'all' until we have a way to know total count
-    // We compare selected count vs total tree size — if equal, send 'all'
-    const allTreeIds = React.useMemo(() => {
+    const allTreeIds = useMemo(() => {
         const flat: number[] = [];
         const traverse = (nodes: CategoryNode[]) =>
-            // ✅ use category_id not id
             nodes.forEach(n => { flat.push(n.category_id); traverse(n.children); });
         traverse(tree);
         return flat;
     }, [tree]);
 
-    // Ensure selectedCategoryIds is always a plain array before joining
     const safeCategoryIds = Array.isArray(selectedCategoryIds) ? selectedCategoryIds : [];
     const categoryId = (safeCategoryIds.length === 0 || safeCategoryIds.length === allTreeIds.length)
         ? 'all'
@@ -102,33 +129,10 @@ export default function HomeAdsList() {
 
     const hasMore = hugs.length < totalCount && totalCount > 0;
 
-    useEffect(() => {
-        fetchCategories()
-            .then(flat => {
-                const built = buildCategoryTree(flat);
-                setTree(built);
-
-                // If no cached selection → select all IDs by default
-                if (selectedCategoryIds.length === 0) {
-                    const allFlat: CategoryNode[] = [];
-                    const traverse = (nodes: CategoryNode[]) =>
-                        nodes.forEach(n => { allFlat.push(n); traverse(n.children); });
-                    traverse(built);
-                    // ✅ use category_id not id
-                    const allIds = allFlat.map(n => n.category_id);
-                    setSelectedCategories(new Set(allIds));
-                    setSelectedCategoryIds(allIds);
-                }
-            })
-            .catch(() => { });
+    const handleFilterApply = useCallback((newState: FilterState) => {
+        setFilterState(newState);
     }, []);
 
-    const handleCategoryConfirm = (newSelected: SelectedCategories) => {
-        setSelectedCategories(newSelected);
-        // Persist to store as plain number array
-        const ids = Array.from(newSelected).map(Number);
-        setSelectedCategoryIds(ids);
-    };
     const fetchHugs = async (pageNum: number, replace = false) => {
         if (loadingRef.current) return;
         loadingRef.current = true;
@@ -136,20 +140,18 @@ export default function HomeAdsList() {
         setError(null);
 
         try {
-            // Build query string manually to avoid encoding commas in categoryId
             let query = `categoryId=${safeCategoryIds.map(Number).join(',')}`;
-            query += `&distance=${DISTANCE}`;
-            query += `&distance_type=${DISTANCE_TYPE}`;
+            query += `&distance=${filterState.distance}`;
+            query += `&distance_type=${filterState.distanceType}`;
             query += `&title=${encodeURIComponent(searchTitle)}`;
             query += `&page=${pageNum}`;
-            query += `&wifi=`;
-            if (location?.lat) query += `&lat=${location.lat}`;
-            if (location?.long) query += `&long=${location.long}`;
+            query += `&wifi=${filterState.wifiActive ? '1' : ''}`;
+            if (filterState.locationActive && location?.lat) query += `&lat=${location.lat}`;
+            if (filterState.locationActive && location?.long) query += `&long=${location.long}`;
 
             const res = await apiClient.get<HugsListResponse>(
                 `${endpoints.hugs.list}?${query}`
             );
-
 
             if (res.result === true && Array.isArray(res.data?.result)) {
                 const items = res.data.result as HugItem[];
@@ -174,9 +176,35 @@ export default function HomeAdsList() {
         }
     };
 
+    // ── Re-fetch when filters or location changes ──
     useEffect(() => {
         fetchHugs(1, true);
-    }, [location?.lat, location?.long, categoryId, searchTitle]);
+    }, [
+        location?.lat,
+        location?.long,
+        categoryId,
+        searchTitle,
+        filterState.distance,
+        filterState.distanceType,
+        filterState.locationActive,
+        filterState.wifiActive,
+    ]);
+
+    // ── Auto-refresh timer — only when manualRefresh is OFF ──
+    useEffect(() => {
+        if (refreshTimerRef.current) {
+            clearInterval(refreshTimerRef.current);
+            refreshTimerRef.current = null;
+        }
+        if (!filterState.manualRefresh) {
+            refreshTimerRef.current = setInterval(() => {
+                fetchHugs(1, true);
+            }, 60000); // auto refresh every 60s
+        }
+        return () => {
+            if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
+        };
+    }, [filterState.manualRefresh]);
 
     const onRefresh = () => {
         setRefreshing(true);
@@ -220,18 +248,50 @@ export default function HomeAdsList() {
         );
     };
 
-    return (
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
+    const ListHeader = useCallback(() => (
+        <View>
             <SystemBanner />
-            <CategoryChips
-                tree={tree}
-                selected={selectedCategories}
-                onRemove={handleCategoryConfirm}
+            <ListingCard
+                id={PROMO_CARD.id}
+                title={PROMO_CARD.title}
+                image={PROMO_CARD.image}
+                location={PROMO_CARD.address}
+                timeAgo={PROMO_CARD.timeAgo}
+                category={PROMO_CARD.category}
+                rooms={PROMO_CARD.rooms}
+                area={PROMO_CARD.area}
+                capacity={PROMO_CARD.capacity}
+                rent={PROMO_CARD.rent}
+                mirrored={true}
             />
+            {!isWide && (
+                <CategoryChips
+                    tree={tree}
+                    selected={selectedCategories}
+                    onRemove={onCategoryConfirm}
+                />
+            )}
             <FilterBar
                 tree={tree}
                 selected={selectedCategories}
-                onCategoryConfirm={handleCategoryConfirm}
+                onCategoryConfirm={onCategoryConfirm}
+                onFiltersPress={() => setFilterModalVisible(true)}
+                hideCategoryButton={isWide}
+                wifiActive={filterState.wifiActive}
+                locationActive={filterState.locationActive}
+                onWifiToggle={v => setFilterState(p => ({ ...p, wifiActive: v }))}
+                onLocationToggle={v => setFilterState(p => ({ ...p, locationActive: v }))}
+            />
+        </View>
+    ), [tree, selectedCategories, onCategoryConfirm, isWide, filterState.wifiActive, filterState.locationActive]);
+
+    return (
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+            <FilterModal
+                visible={filterModalVisible}
+                initialState={filterState}
+                onClose={() => setFilterModalVisible(false)}
+                onApply={handleFilterApply}
             />
             {loading && hugs.length === 0 ? (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -239,19 +299,29 @@ export default function HomeAdsList() {
                 </View>
             ) : (
                 <FlatList
+                    key={numColumns}
                     data={hugs}
                     keyExtractor={(item) => item.id.toString()}
-                    renderItem={({ item, index }) => (
-                        <ListingCard
-                            id={item.id}
-                            title={item.title}
-                            image={item.image ? `${ENV.api.imageBaseUrl}${item.image}` : undefined}
-                            location={item.address}
-                            timeAgo={getTimeAgo(item.date, t)}
-                            category={item.categories_names}
-                            distance={item.user_distance}
-                            mirrored={index === 0}
-                        />
+                    numColumns={numColumns}
+                    columnWrapperStyle={
+                        numColumns > 1
+                            ? { gap: 8, paddingHorizontal: 12 }
+                            : undefined
+                    }
+                    ListHeaderComponent={ListHeader}
+                    renderItem={({ item }) => (
+                        <View style={numColumns > 1 ? { flex: 1 } : undefined}>
+                            <ListingCard
+                                id={item.id}
+                                title={item.title}
+                                image={item.image ? `${ENV.api.imageBaseUrl}${item.image}` : undefined}
+                                location={item.address}
+                                timeAgo={getTimeAgo(item.date, t)}
+                                category={item.categories_names}
+                                distance={item.user_distance}
+                                mirrored={false}
+                            />
+                        </View>
                     )}
                     showsVerticalScrollIndicator={false}
                     onEndReached={onEndReached}
@@ -268,7 +338,6 @@ export default function HomeAdsList() {
                     }
                 />
             )}
-
         </View>
     );
 }

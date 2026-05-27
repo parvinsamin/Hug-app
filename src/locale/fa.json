@@ -52,6 +52,13 @@
         "filters": "فیلترها",
         "from_location": "از مکان",
         "from_wifi": "از وای‌فای",
-        "active_filters": "ویژگی"
+        "active_filters": "ویژگی",
+        "kilometer": "کیلومتر",
+        "mile": "مایل",
+        "receive_from_location": "دریافت هاگ از موقعیت مکانی",
+        "receive_from_wifi": "دریافت هاگ از وای‌فای",
+        "manual_refresh": "بروزرسانی دستی",
+        "default_settings": "تنظیمات پیش‌فرض",
+        "apply": "اعمال فیلتر"
     }
 }

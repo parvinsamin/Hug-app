@@ -89,7 +89,8 @@ export default function BootLoader() {
             return null;
         }
     };
-    const init = async () => {
+
+    const init1 = async () => {
         alert(1)
         console.log('🚀 Boooot start');
         console.log('step 1');
@@ -111,7 +112,7 @@ export default function BootLoader() {
         }
     };
     // ─── Main boot ───────────────────────────────────────────────────────────
-    const init1 = async () => {
+    const init = async () => {
         console.log('🚀 Boottt start');
 
         const safetyTimer = setTimeout(async () => {

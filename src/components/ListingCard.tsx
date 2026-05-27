@@ -6,13 +6,11 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// ─── Mock attributes pool — replace with API data later ──────────────────────
 const ATTR_POOL = [
     'بدون اتاق', '۱۵۰۰۰متر', 'اجاره', 'آپارتمان',
     'ودیعه', '۲ اتاق', '۸۰ متر', 'نوساز', 'تعداد اتاق',
 ];
 
-// Stable random attrs per item id — 2 to 3 chips
 function getMockAttrs(id: number): string[] {
     const count = (id % 2) + 2;
     const result: string[] = [];
@@ -63,11 +61,12 @@ export default function ListingCard({
 }: ListingCardProps) {
     const { t } = useTranslation();
 
-    // Use API chips if available, else mock
-    const chips: string[] = rooms || area
+    // Build chips: rooms + area + deposit label (if present), else mock
+    const chips: string[] = (rooms || area || deposit)
         ? [
             rooms && rooms !== '' ? rooms : null,
-            area && area > 0 ? t('ads.area', { value: area }) : null,
+            area && area > 0 ? `${area}متر` : null,
+            deposit ? 'ودیعه' : null,
         ].filter(Boolean) as string[]
         : getMockAttrs(id);
 
@@ -88,17 +87,16 @@ export default function ListingCard({
 
     const textBlock = (
         <View style={styles.textBlock}>
-            {/* Bookmark */}
-            <TouchableOpacity
-                style={styles.bookmarkButton}
-                onPress={onBookmark}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-                <Bookmark size={18} color={colors.muted} strokeWidth={1.5} />
-            </TouchableOpacity>
-
-            {/* Title */}
-            <Text style={styles.title} numberOfLines={2}>{title}</Text>
+            {/* Bookmark + Title row */}
+            <View style={styles.titleRow}>
+                <TouchableOpacity
+                    onPress={onBookmark}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                    <Bookmark size={18} color={colors.muted} strokeWidth={1.5} />
+                </TouchableOpacity>
+                <Text style={styles.title} numberOfLines={2}>{title}</Text>
+            </View>
 
             {/* Attribute chips */}
             {chips.length > 0 && (
@@ -113,7 +111,7 @@ export default function ListingCard({
 
             {/* Location */}
             {location !== '' && (
-                <Text style={styles.location} numberOfLines={1}>{location}</Text>
+                <Text style={styles.location} numberOfLines={2}>{location}</Text>
             )}
 
             {/* Time */}
@@ -135,25 +133,33 @@ export default function ListingCard({
                 {textBlock}
             </View>
 
-            {/* Price row */}
+            {/* Price row — RTL: right side = deposit/capacity, left side = rent */}
             {(rent || deposit || capacity) && (
                 <View style={styles.priceRow}>
-                    {rent ? (
-                        <View style={styles.priceItem}>
-                            <Text style={styles.priceLabel}>{t('ads.rent')}: </Text>
-                            <Text style={styles.priceValue}>{rent}</Text>
-                        </View>
-                    ) : <View />}
-                    <View style={styles.priceDivider} />
+                    {/* Right side */}
                     {capacity && capacity > 0 ? (
                         <View style={styles.priceItem}>
-                            <Text style={styles.priceLabel}>تعداد: </Text>
                             <Text style={styles.priceValue}>{capacity} نفر ثابت</Text>
+                            <Text style={styles.priceLabel}> :تعداد</Text>
                         </View>
                     ) : deposit ? (
                         <View style={styles.priceItem}>
-                            <Text style={styles.priceLabel}>{t('ads.deposit')}: </Text>
-                            <Text style={styles.priceValue}>{deposit}</Text>
+                            <Text style={styles.priceValue}>
+                                {deposit} <Text style={styles.priceCurrency}>تومان</Text>
+                            </Text>
+                            <Text style={styles.priceLabel}> :{t('ads.deposit')}</Text>
+                        </View>
+                    ) : <View />}
+
+                    <View style={styles.priceDivider} />
+
+                    {/* Left side */}
+                    {rent ? (
+                        <View style={styles.priceItem}>
+                            <Text style={styles.priceValue}>
+                                {rent} <Text style={styles.priceCurrency}>تومان</Text>
+                            </Text>
+                            <Text style={styles.priceLabel}> :{t('ads.rent')}</Text>
                         </View>
                     ) : <View />}
                 </View>
@@ -176,15 +182,13 @@ export default function ListingCard({
 const IMAGE_SIZE = 110;
 
 const styles = StyleSheet.create({
-    // White card, no border, no shadow — gray background between cards creates separation
     card: {
         backgroundColor: colors.surface,
         paddingHorizontal: 16,
         paddingTop: 14,
         paddingBottom: 0,
-        marginBottom: 8, // gray gap between cards
+        marginBottom: 8,
     },
-
     mainRow: {
         flexDirection: 'row',
         gap: 12,
@@ -193,7 +197,6 @@ const styles = StyleSheet.create({
     mainRowMirrored: {
         flexDirection: 'row-reverse',
     },
-
     imageWrapper: {
         width: IMAGE_SIZE,
         height: IMAGE_SIZE,
@@ -222,14 +225,19 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: '#fff',
     },
-
     textBlock: {
         flex: 1,
         alignItems: 'flex-end',
     },
-    bookmarkButton: {
-        alignSelf: 'flex-end',
-        marginBottom: 4,
+
+    // Title row: bookmark icon left, title right
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        width: '100%',
+        marginBottom: 8,
+        gap: 6,
     },
     title: {
         fontFamily: fonts.bold,
@@ -237,8 +245,9 @@ const styles = StyleSheet.create({
         color: colors.text,
         textAlign: 'right',
         lineHeight: 22,
-        marginBottom: 8,
+        flex: 1,
     },
+
     chipsRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -250,7 +259,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 14,
-        backgroundColor: colors.chip, // gray chip
+        backgroundColor: colors.chip,
         borderWidth: 1,
         borderColor: colors.border,
     },
@@ -273,7 +282,7 @@ const styles = StyleSheet.create({
         textAlign: 'right',
     },
 
-    // Price row
+    // Price row — RTL layout
     priceRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -294,6 +303,11 @@ const styles = StyleSheet.create({
     priceValue: {
         fontFamily: fonts.bold,
         fontSize: 13,
+        color: colors.text,
+    },
+    priceCurrency: {
+        fontFamily: fonts.regular,
+        fontSize: 12,
         color: colors.text,
     },
     priceDivider: {

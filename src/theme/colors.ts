@@ -9,4 +9,5 @@ export const colors = {
     chip: "#F0F0F0",
     chipText: "#6B6B6B",
     accent: "#FF510F",
+    primaryLight: "#EEF4FF"
 };

@@ -4,9 +4,9 @@ import { useTranslation } from "react-i18next";
 
 import { Header } from "@/src/components/Header";
 import AdCreateScreen from "@/src/features/ad-create/AdCreateScreen";
+import HugScreen from "@/src/features/hug/HugScreen";
 import MessagesScreen from "@/src/features/messages/MessagesScreen";
 import ProfileScreen from "@/src/features/profile/ProfileScreen";
-import HomeAdsList from "@/src/screens/tabs/home/HomeAdsList";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const Tab = createBottomTabNavigator();
@@ -36,7 +36,7 @@ export default function MainTabs() {
       >
         <Tab.Screen
           name="Hug"
-          component={HomeAdsList}
+          component={HugScreen}
           options={{ title: t("tabs.home") }}
         />
         <Tab.Screen
